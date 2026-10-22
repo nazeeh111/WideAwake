@@ -1,0 +1,2 @@
+WideAwake keeps a MacBook awake with the lid closed for a time you choose. Pick 15 minutes to 6 hours; reopen the lid to stop and reset.
+https://github.com/nazeeh111/WideAwake

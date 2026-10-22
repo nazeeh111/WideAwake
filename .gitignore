@@ -1,0 +1,7 @@
+.build/
+.swiftpm/
+.DS_Store
+dist/
+brag-output/composition/snapshots/
+brag-output/brag.original.mp4
+.hyperframes/
