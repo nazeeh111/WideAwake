@@ -1,22 +1,21 @@
-# WideAwake demo plan
+# WideAwake 0.2 demo
 
-1. App: a native menu bar timer for closed-lid work.
-2. Strongest claim: choose a time; opening the lid stops and resets it.
-3. Visual hook: sunrise identity, ink #132C35, paper #F8F3E9, sun #F0AB32.
-4. Actual UI: installed panel at Off and Ready with 1h30 selected. Captured from macOS; only OS sharing chrome is cropped.
-5. Shortest satisfying edit: 18 seconds.
-6. Tone: polished, quiet, functional. No hype, decorative motion or animated UI.
-7. Audio: intentional silence. This tiny utility needs a readable demonstration, with no narration, music or synthetic click sounds.
-8. Caption: WideAwake keeps a MacBook awake with the lid closed for a time you choose. Pick 15 minutes to 6 hours; reopen the lid to stop and reset.
-9. User flow: choose duration → close lid to start → reopen to reset. Screenshots show real states; this is an explanatory edit, not footage of a physical lid test.
+1. App: a menu bar timer for closed-lid work with a configurable slider.
+2. Strongest claim: choose the step and range; opening the lid stops and resets it.
+3. Visual hook: static sunrise, ink #132C35, paper #F8F3E9, sun #F0AB32.
+4. Actual UI: installed settings at 2-hour increments / 3-day maximum; native timer at Ready90min and Off. No fabricated states or OS chrome.
+5. Duration:21seconds, landscape1280×720.
+6. Tone: quiet, polished, functional. Static scenes and cuts. No UI animation or marketing metrics.
+7. Audio: intentional silence, no narration/music/SFX. Nothing to sonify.
+8. Caption: a menu bar timer with your own increment and maximum. Reopen tostop/reset.
+9. Flow: configure → select → close → reopen/reset. This is an explanatory edit using genuine captures, not footage of a physical lid test.
 
-## Storyboard
+| Time | Visual and copy | Edit |
+|---|---|---|
+|0–3|Sunrise; Set a time. Close the lid.|Static, silent|
+|3–8|Actual settings; Your steps. Your range.|Cut|
+|8–13|Actual ready panel; Set a time. Close the lid.|Cut|
+|13–17|Actual Off panel; Reopen to reset.|Cut|
+|17–21|WideAwake and repository URL|Cut|
 
-| Time | Scene | Copy and visual | Transition / audio |
-|---|---|---|---|
-| 0–4 | Hook | Set a time. Close the lid. / WideAwake sunrise mark | Static hold, silent |
-| 4–10 | Select | 15-minute steps. Up to 6 hours. / actual Ready panel | Sharp cut, silent |
-| 10–14 | Reset | Reopen to reset. / actual Off panel | Sharp cut, silent |
-| 14–18 | Outro | WideAwake / github.com/nazeeh111/WideAwake | Sharp cut, silent |
-
-Claims trace to README, native UI and ManualLidSession.swift. No CPU, memory or hardware reliability numbers are advertised. The app itself has no animation. This presentation also uses static scenes.
+All claims trace to README, native settings and tested state controller. Validate structure/layout, render, inspect frames, choose6seconds as the settled settings poster and bake it into frame0.

@@ -10,7 +10,22 @@ final class ManualLidSession {
     private let manager: SessionManager
     private var revision = 0
     private var closed = false
-    var seconds: TimeInterval { TimeInterval(steps * 900) }
+    var settings: SliderSettings { manager.config.sliderSettings }
+    var seconds: TimeInterval { settings.seconds(at: steps) }
+    var armingWindow: TimeInterval { min(6 * 3600, settings.maximumSeconds) }
+    func applySettings(_ settings: SliderSettings) throws {
+        try settings.validate()
+        guard !manager.isActive, !manager.state.isDirty, phase != .arming, phase != .stopping else {
+            throw SettingsError.invalid("Cancel the current timer before changing the slider.")
+        }
+        var updated = manager.config
+        updated.sliderStepMinutes = settings.stepMinutes
+        updated.maxDuration = settings.maximumSeconds
+        try manager.store.saveConfig(updated)
+        manager.config = updated
+        steps = 0
+        onChange?()
+    }
 
     init(manager: SessionManager) {
         self.manager = manager
@@ -26,7 +41,7 @@ final class ManualLidSession {
     func prepare(lidClosed: Bool) async {
         closed = lidClosed
         if lidClosed, let s = manager.session {
-            steps = min(24, max(1, Int(ceil(s.remaining(at: Date()) / 900))))
+            steps = min(settings.stepCount, max(1, Int(ceil(s.remaining(at: Date()) / settings.stepSeconds))))
             phase = .running
         } else {
             if manager.isActive || manager.state.isDirty {
@@ -39,11 +54,11 @@ final class ManualLidSession {
     func choose(_ rawSteps: Int) async {
         revision += 1
         let ticket = revision
-        steps = min(24, max(0, rawSteps))
+        steps = min(settings.stepCount, max(0, rawSteps))
         guard steps > 0 else { await stop(); return }
         phase = .arming; onChange?()
         let ok: Bool
-        let prearm = closed ? seconds : TimeInterval(6 * 3600)
+        let prearm = closed ? seconds : armingWindow
         if manager.isActive { ok = await manager.resetDuration(prearm) }
         else { ok = await manager.start(duration: prearm) != nil }
         guard revision == ticket else { return }

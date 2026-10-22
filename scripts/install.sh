@@ -7,7 +7,7 @@
 #
 #   ./scripts/install.sh                         build from this source checkout
 #   ./scripts/install.sh --app ./WideAwake.app    install a prebuilt bundle (the
-#                                                0.1.0 release zip) as it is:
+#                                                0.2.0 release zip) as it is:
 #                                                no build and no re-signing.
 #                                                backstop.sh still comes from
 #                                                this script's scripts folder.

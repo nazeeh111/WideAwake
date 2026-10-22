@@ -1,10 +1,10 @@
 <p align="center"><img src="docs/hero.svg" alt="WideAwake. Set a time. Close the lid. Open to reset." width="100%"></p>
 
-<p align="center"><a href="https://github.com/nazeeh111/WideAwake/releases/tag/v0.1.0">Download preview</a> · <a href="#install">Install</a> · <a href="#how-it-works">How it works</a> · <a href="LICENSE">MIT license</a></p>
+<p align="center"><a href="https://github.com/nazeeh111/WideAwake/releases/tag/v0.2.0">Download preview</a> · <a href="#install">Install</a> · <a href="#how-it-works">How it works</a> · <a href="LICENSE">MIT license</a></p>
 
-WideAwake is a small native macOS menu bar timer for keeping a MacBook awake with the lid closed. Choose **15 minutes to 6 hours**, in 15-minute steps. Reopening the lid stops the timer and resets the slider to Off.
+WideAwake is a small native macOS menu bar timer for keeping a MacBook awake with the lid closed. Choose a duration using a slider you can customize. The defaults are **15-minute steps up to 6 hours**. Reopening the lid stops the timer and resets the slider to Off.
 
-<p align="center"><img src="docs/panel-ready.svg" alt="Actual WideAwake interface with 1 hour 30 minutes selected" width="440"></p>
+<p align="center"><img src="docs/panel-ready.png" alt="Actual WideAwake interface with 1 hour 30 minutes selected" width="360"></p>
 
 ## Use it
 
@@ -13,7 +13,17 @@ WideAwake is a small native macOS menu bar timer for keeping a MacBook awake wit
 3. Close the lid. The selected time starts then.
 4. Open the lid to stop and reset. Choose another time when you need it.
 
-Move the slider to **Off** to cancel at any time. If you leave it ready with the lid open, it disarms after six hours. Expiry while closed restores normal sleep behavior.
+Move the slider to **Off** to cancel at any time. If you leave it ready with the lid open, it disarms after six hours, or the configured maximum if that is shorter. Expiry while closed restores normal sleep behavior.
+
+## Make it yours
+
+Open the **gear** in the panel to set the increment and maximum using minutes, hours or days. Choose positive whole numbers, from 1 minute to 30 days. The maximum must be a multiple of the increment, so every step is exact. A preview shows the resulting range and step count before you save.
+
+See a [three-day selection](docs/panel-custom.png). Settings persist across restarts. **Defaults** restores 15-minute steps and a 6-hour maximum. Turn the timer off before changing its range. The − and + buttons make precise selections easy, including when a large range has too many steps to show individual ticks.
+
+<p align="center"><img src="docs/settings.png" alt="WideAwake settings with a two-hour increment and three-day maximum" width="360"></p>
+
+WideAwake stays in the menu bar, including while editing settings. No Dock icon or separate settings window. The native panel follows your Mac’s [light or dark appearance](docs/panel-dark.png). Click away or press Escape to dismiss the panel.
 
 ## Install
 
@@ -55,7 +65,7 @@ Battery and thermal safeguards remain enabled. At low battery it can enable Low 
 
 ## Preview status and verification
 
-The initial preview has **135 passing tests**, covering timer selection, close/open cycles, repeated use, bounded waiting, recovery, failed restoration and power rules. The installed interface was exercised at Off, 15 minutes, 1 hour 30 minutes and 6 hours. Enabling and releasing the power guard was verified on the development Mac.
+The initial preview has **141 passing tests**, covering timer selection, close/open cycles, repeated use, bounded waiting, recovery, failed restoration and power rules. The installed interface was exercised with the default range and a custom two-hour increment / three-day maximum. Keyboard editing, unit menus, invalid ranges, persistence, precise stepping and Turn off were checked. macOS reported the menu bar utility role while the panel was open. Enabling and releasing the power guard was verified on the development Mac.
 
 A physical closed-lid test was not performed for this release. Behavior across Mac models, external displays and other sleep utilities still needs hardware feedback. This is a preview, not a claim of universal hardware compatibility.
 
@@ -66,7 +76,7 @@ python3 scripts/tests/test_install_replacement.py
 
 ## Demo
 
-[Watch the 18-second demo](https://github.com/nazeeh111/WideAwake/releases/download/v0.1.0/WideAwake-demo.mp4). It uses actual interface captures, with a silent edit and sharp cuts. The source composition lives in [`brag-output`](brag-output).
+[Watch the 21-second demo](https://github.com/nazeeh111/WideAwake/releases/download/v0.2.0/WideAwake-demo.mp4). It uses actual interface captures, with a silent edit and sharp cuts. The source composition lives in [`brag-output`](brag-output).
 
 ## Credits
 

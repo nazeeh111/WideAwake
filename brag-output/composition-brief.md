@@ -1,13 +1,5 @@
-# Hyperframes Composition Brief: WideAwake
+# WideAwake 0.2 composition brief
 
-Objective: show the manual duration → close → reopen flow in 18 seconds, landscape 1280×720 at 30fps.
+21seconds,1280×720,30fps. Use current native PNG captures: settings.png,panel-ready.png,panel-off.png and local sunriseicon. Identity in DESIGN.md: ink#132C35,paper#F8F3E9,sun#F0AB32,system sans serif. No animation, filler or invented performance claims.
 
-Source: README, DESIGN.md, WideAwakeApp.swift, ManualLidSession.swift and actual installed-app screenshots. Use local panel-off.svg, panel-ready.svg and icon.png. Screenshot crops remove only the macOS sharing indicator/titlebar.
-
-Identity: ink #132C35 background, paper #F8F3E9 text, sunrise #F0AB32 accent, system sans-serif. Follow DESIGN.md. Large readable type, actual interface, ample space. No fake dashboards, kinetic type, gradients, glow, animation or invented metrics.
-
-Storyboard: 0–4 hook; 4–10 actual Ready panel and range; 10–14 Off panel and reset; 14–18 brand and repository. All transitions are cuts. Layout must fit the canvas with no clipping.
-
-Audio: intentional silence, no narration. No music/SFX or audio-reactive treatment: a quiet functional utility with no movement to sonify.
-
-Validate structure and nine sampled layouts with the installed local Hyperframes runner. Inspect representative frames, render H.264, choose the settled Ready scene at 6 seconds as poster, then replace frame zero with that poster. Preserve the original render until the replacement validates.
+Story:0–3hook;3–8custom settings;8–13selected timer;13–17reset;17–21brand/repository. Readable static cuts, intentional silence. No music/SFX or audio-reactive treatment; no narration requested. Use current local Hyperframes lint and nine-sample check, inspect representative frames, render H264. Poster from6seconds; replaceonlyframe0 after verification and retain original until replacement passes. Source captures are real UI, not a physical closed-lid test.
