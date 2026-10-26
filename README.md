@@ -78,6 +78,8 @@ python3 scripts/tests/test_install_replacement.py
 
 [Watch the 21-second demo](https://github.com/nazeeh111/WideAwake/releases/download/v0.2.0/WideAwake-demo.mp4). It uses actual interface captures, with a silent edit and sharp cuts. The source composition lives in [`brag-output`](brag-output).
 
-## Credits
+<a id="credits"></a>
 
-WideAwake is derived from [Krish Garg’s Insomnia](https://github.com/krishhgg/Insomnia), version 0.1.0. Its power recovery foundation is retained under the MIT license. WideAwake adds a manual lid-cycle controller, a smaller native interface, a new identity and dedicated tests. See [NOTICE](NOTICE) and [LICENSE](LICENSE).
+## License
+
+[MIT license](LICENSE). Retained source provenance and contribution scope are recorded in [NOTICE](NOTICE).

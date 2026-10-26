@@ -1,5 +1,4 @@
-WideAwake includes recovery, power and display code adapted from Insomnia by Krish Garg.
-Upstream: https://github.com/krishhgg/Insomnia
-Base: v0.1.0, commit ea5ce156a90324babfd416e2bfa898f135f4e0db
-Original MIT copyright and license are retained in LICENSE.
-The manual slider, lid-reset workflow, native interface and WideAwake branding are local changes.
+Retained recovery, power and display source: Insomnia v0.1.0,
+https://github.com/krishhgg/Insomnia/tree/ea5ce156a90324babfd416e2bfa898f135f4e0db
+
+The original MIT copyright and license remain in LICENSE.
