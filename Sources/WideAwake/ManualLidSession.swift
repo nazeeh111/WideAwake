@@ -3,9 +3,10 @@ import Foundation
 /// One selected duration, one close/open cycle. No polling or app detection.
 @MainActor
 final class ManualLidSession {
-    enum Phase: Equatable { case idle, arming, ready, running, stopping, failed(String) }
+    enum Phase: Equatable { case idle, arming, ready, running, stopping, blocked, failed(String) }
     private(set) var steps = 0
     private(set) var phase: Phase = .idle
+    private(set) var notice: String?
     var onChange: (() -> Void)?
     private let manager: SessionManager
     private var revision = 0
@@ -13,17 +14,23 @@ final class ManualLidSession {
     var settings: SliderSettings { manager.config.sliderSettings }
     var seconds: TimeInterval { settings.seconds(at: steps) }
     var armingWindow: TimeInterval { min(6 * 3600, settings.maximumSeconds) }
-    func applySettings(_ settings: SliderSettings) throws {
+    func applySettings(_ settings: SliderSettings, battery: BatterySettings? = nil) throws {
         try settings.validate()
-        guard !manager.isActive, !manager.state.isDirty, phase != .arming, phase != .stopping else {
+        let battery = battery ?? manager.config.batterySettings
+        try battery.validate()
+        guard !manager.isActive, !manager.state.isDirty, manager.pendingEnd == nil, phase != .arming, phase != .stopping else {
             throw SettingsError.invalid("Cancel the current timer before changing the slider.")
         }
         var updated = manager.config
         updated.sliderStepMinutes = settings.stepMinutes
         updated.maxDuration = settings.maximumSeconds
+        updated.lowPowerFloor = battery.lowPowerPercent
+        updated.endFloor = battery.stopPercent
         try manager.store.saveConfig(updated)
         manager.config = updated
         steps = 0
+        notice = nil
+        phase = .idle
         onChange?()
     }
 
@@ -34,7 +41,15 @@ final class ManualLidSession {
     private func ended(_ outcome: EndOutcome) {
         if phase != .stopping { revision += 1 }
         steps = 0
-        if outcome == .restored { phase = .idle }
+        if outcome == .restored {
+            phase = .idle
+            switch manager.lastEndReason {
+            case .batteryFloor: notice = "Timer stopped below \(manager.config.endFloor)% battery. Connect power or change the limit in Settings."
+            case .thermalCritical: notice = "Timer stopped because your Mac is too hot. Let it cool before restarting."
+            case .timer: notice = "Timer finished. Normal sleep is restored."
+            default: notice = nil
+            }
+        }
         else { phase = .failed(manager.lastError ?? "Restoration is pending. Leave WideAwake running.") }
         onChange?()
     }
@@ -52,6 +67,7 @@ final class ManualLidSession {
         onChange?()
     }
     func choose(_ rawSteps: Int) async {
+        notice = nil
         revision += 1
         let ticket = revision
         steps = min(settings.stepCount, max(0, rawSteps))
@@ -63,7 +79,10 @@ final class ManualLidSession {
         else { ok = await manager.start(duration: prearm) != nil }
         guard revision == ticket else { return }
         if ok, manager.isActive { phase = closed ? .running : .ready }
-        else { await failSafely(manager.lastError ?? "Could not start. Try again.") }
+        else {
+            let blocked = manager.startBlockMessage
+            await failSafely(blocked ?? notice ?? manager.lastError ?? "Could not start. Try again.", powerBlocked: blocked != nil)
+        }
         onChange?()
     }
     func lidChanged(_ isClosed: Bool) async {
@@ -81,17 +100,17 @@ final class ManualLidSession {
         else { await failSafely(manager.lastError ?? "Timer could not be updated.") }
         onChange?()
     }
-    private func failSafely(_ message: String) async {
+    private func failSafely(_ message: String, powerBlocked: Bool = false) async {
         await stop()
         guard steps == 0, phase == .idle else { return }
-        phase = .failed(message)
+        phase = powerBlocked ? .blocked : .failed(message)
         onChange?()
     }
     func stop() async {
         revision += 1
         let ticket = revision
         steps = 0
-        if !manager.isActive && !manager.state.isDirty { phase = .idle; onChange?(); return }
+        if !manager.isActive && !manager.state.isDirty && manager.pendingEnd == nil { phase = .idle; onChange?(); return }
         phase = .stopping; onChange?()
         let outcome = await manager.end(reason: .user)
         guard revision == ticket else { return }

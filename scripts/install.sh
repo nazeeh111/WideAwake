@@ -7,7 +7,7 @@
 #
 #   ./scripts/install.sh                         build from this source checkout
 #   ./scripts/install.sh --app ./WideAwake.app    install a prebuilt bundle (the
-#                                                0.2.0 release zip) as it is:
+#                                                release zip) as it is:
 #                                                no build and no re-signing.
 #                                                backstop.sh still comes from
 #                                                this script's scripts folder.
@@ -166,9 +166,40 @@ fi
 #    The password prompt comes first: until the rule is installed and proven
 #    effective, the running app is not asked to quit and neither the bundle,
 #    the installed backstop.sh nor the LaunchAgent are touched.
-step "Writing $SUDOERS (requires your password once)"
+# Reuse the same four grants on updates. Listing permissions executes no
+# pmset command and neither reads nor rewrites the existing rule file.
+existing_power_grants() {
+  local command policy
+  for command in "-a disablesleep 0" "-a disablesleep 1" "-b lowpowermode 0" "-b lowpowermode 1"; do
+    # Intentional splitting of fixed, internal tokens only.
+    policy="$(LC_ALL=C "$SUDO" -n -ll /usr/bin/pmset $command 2>/dev/null)" || return 1
+    # Listing success alone is insufficient: cached authentication or an
+    # unrelated NOPASSWD rule can allow listing a password-required command.
+    # Require an explicit matching root rule with authentication disabled.
+    # Unknown output fails conservatively, without running a power command.
+    /usr/bin/awk -v expected="/usr/bin/pmset $command" '
+      /^Sudoers entry:/ { root=0; passwordless=0 }
+      /^[[:space:]]*RunAsUsers:/ { root=($2 == "root") }
+      /^[[:space:]]*Options:/ {
+        for (i=2; i<=NF; i++) {
+          token=$i; gsub(/,/, "", token)
+          if (token == "!authenticate") passwordless=1
+          if (token == "authenticate") passwordless=0
+        }
+      }
+      { line=$0; sub(/^[[:space:]]*/, "", line)
+        if (line == expected || line == "Matched: " expected) valid=(root && passwordless)
+      }
+      END { exit !valid }
+    ' <<< "$policy" || return 1
+  done
+}
 TMP_SUDOERS="$(mktemp)"
 trap 'rm -f "$TMP_SUDOERS"' EXIT
+if existing_power_grants; then
+  step "Existing power-command permissions verified; reusing them"
+else
+  step "Writing $SUDOERS (requires your password once)"
 cat > "$TMP_SUDOERS" <<SUDO
 # Installed by WideAwake install.sh. Exactly four commands, nothing else.
 $USER ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1
@@ -182,12 +213,9 @@ else
   echo "sudoers file failed validation (or sudo did not authenticate); not installed. Nothing was changed." >&2
   exit 1
 fi
-# `sudo -l <command>` checks the rule without running pmset (nothing on the
-# machine changes). The backstop cannot undo anything without it, so stop here.
-if "$SUDO" -n -l /usr/bin/pmset -a disablesleep 0 >/dev/null 2>&1; then
-  echo "sudoers rule verified"
-else
-  echo "'sudo -n pmset' is still not permitted; check $SUDOERS. The app, backstop.sh and LaunchAgent were not touched." >&2
+fi
+if ! existing_power_grants; then
+  echo "The four power commands are not all permitted. App and recovery job unchanged; check $SUDOERS." >&2
   exit 1
 fi
 

@@ -3,6 +3,11 @@ import Foundation
 /// Spec section 6 decision table (plus the section 4 lid row), as a pure
 /// function plus a small driver.
 enum FloorRules {
+    static func stopReason(percent: Int?, isCharging: Bool, thermal: ProcessInfo.ThermalState, config: Config) -> EndReason? {
+        if let percent, !isCharging, percent < config.endFloor { return .batteryFloor }
+        if config.thermalRules, thermal == .critical { return .thermalCritical }
+        return nil
+    }
     /// Why Low Power Mode is being switched on. The strongest cause is
     /// named when several hold: thermal, then battery, then lid.
     enum LowPowerCause: Equatable, Sendable {
@@ -34,12 +39,8 @@ enum FloorRules {
         lowPowerSetByUs: Bool,
         config: Config
     ) -> [Action] {
-        let onBattery = !isCharging
-        if let p = percent, onBattery, p < config.endFloor {
-            return [.endSession(.batteryFloor)]
-        }
-        if config.thermalRules, thermal == .critical {
-            return [.endSession(.thermalCritical)]
+        if let reason = stopReason(percent: percent, isCharging: isCharging, thermal: thermal, config: config) {
+            return [.endSession(reason)]
         }
         let cause = lowPowerCause(percent: percent, isCharging: isCharging, thermal: thermal, lidClosed: lidClosed, config: config)
         if let cause, !lowPowerSetByUs { return [.enableLowPower(cause)] }

@@ -11,6 +11,9 @@ struct Config: Codable, Equatable, Sendable {
     var endFloor: Int = 10
     var thermalRules: Bool = true
     var launchAtLogin: Bool = true
+    var batterySettings: BatterySettings {
+        BatterySettings(lowPowerPercent: lowPowerFloor, stopPercent: endFloor)
+    }
     var sliderSettings: SliderSettings {
         guard maxDuration.isFinite, maxDuration >= 60,
               maxDuration <= Double(SliderSettings.limitMinutes * 60),
@@ -31,6 +34,10 @@ struct Config: Codable, Equatable, Sendable {
         endFloor = try c.decodeIfPresent(Int.self, forKey: .endFloor) ?? 10
         thermalRules = try c.decodeIfPresent(Bool.self, forKey: .thermalRules) ?? true
         launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? true
+        if (try? batterySettings.validate()) == nil {
+            lowPowerFloor = BatterySettings.defaults.lowPowerPercent
+            endFloor = BatterySettings.defaults.stopPercent
+        }
         let scale = sliderSettings
         sliderStepMinutes = scale.stepMinutes
         maxDuration = scale.maximumSeconds
