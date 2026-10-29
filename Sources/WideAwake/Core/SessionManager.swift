@@ -72,6 +72,10 @@ final class SessionManager {
     private(set) var countdownText: String = ""
     /// Last failure worth showing in the menu; cleared on the next success.
     private(set) var lastError: String?
+    private(set) var lastEndReason: EndReason?
+    private let powerSnapshot: @Sendable () -> PowerSnapshot
+    var currentPower: PowerSnapshot { powerSnapshot() }
+    var startBlockMessage: String? { currentPower.blockingMessage(config: config) }
 
     var isActive: Bool { session != nil }
 
@@ -154,6 +158,7 @@ final class SessionManager {
         notifier: any Notifying = RecordingNotifier(),
         clamshell: @escaping @Sendable () -> Bool? = { LidObserver.readClamshellState() },
         clock: @escaping @Sendable () -> Date = { Date() },
+        powerSnapshot: @escaping @Sendable () -> PowerSnapshot = { PowerSnapshot(percent: nil) },
         recoveryLockTimeout: TimeInterval = 10,
         recoveryRetryDelay: TimeInterval = 30,
         reassertDelay: Duration = .seconds(2)
@@ -169,6 +174,7 @@ final class SessionManager {
         self.notifier = notifier
         self.clamshell = clamshell
         self.clock = clock
+        self.powerSnapshot = powerSnapshot
         self.recoveryLock = RecoveryLock(url: paths.recoveryLock)
         self.recoveryLockTimeout = recoveryLockTimeout
         self.recoveryRetryDelay = recoveryRetryDelay
@@ -210,7 +216,8 @@ final class SessionManager {
             audio: audio,
             display: display,
             keyboard: keyboard,
-            notifier: notifier
+            notifier: notifier,
+            powerSnapshot: { PowerSnapshot.read() }
         )
         let services = AppServices(
             paths: paths,
@@ -326,6 +333,10 @@ final class SessionManager {
             Log.info("start abandoned: an end was requested first")
             return
         }
+        if let message = startBlockMessage {
+            fail(message)
+            return
+        }
         let now = clock()
         let new = SessionMath.newSession(now: now, duration: duration, maxDuration: config.maxDuration)
         // What was on disk before this attempt, read under the lock. A
@@ -374,6 +385,7 @@ final class SessionManager {
         }
 
         session = new
+        lastEndReason = nil
         lastError = nil
         Log.info("session started until \(iso(new.endsAt)) (\(Int(duration))s requested)")
         await armDeadline(new.endsAt)
@@ -483,6 +495,7 @@ final class SessionManager {
     }
 
     private func performEnd(reason: EndReason) async -> EndOutcome {
+        lastEndReason = reason
         let had = session != nil
         Log.info("session end (\(reason.rawValue))")
         stopTimers()

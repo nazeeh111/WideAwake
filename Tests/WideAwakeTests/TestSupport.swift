@@ -443,7 +443,8 @@ struct Harness {
     func makeManager(
         lockTimeout: TimeInterval = 0.3,
         retryDelay: TimeInterval = 60,
-        reassertDelay: Duration = .seconds(3600)
+        reassertDelay: Duration = .seconds(3600),
+        powerSnapshot: @escaping @Sendable () -> PowerSnapshot = { PowerSnapshot(percent: nil) }
     ) -> SessionManager {
         let c = clock
         let lid = clamshell
@@ -458,6 +459,7 @@ struct Harness {
             notifier: notifier,
             clamshell: { lid.closed },
             clock: { c.now },
+            powerSnapshot: powerSnapshot,
             recoveryLockTimeout: lockTimeout,
             recoveryRetryDelay: retryDelay,
             reassertDelay: reassertDelay

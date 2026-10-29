@@ -1,0 +1,31 @@
+#!/bin/bash
+# Produce the signed app and a self-contained installer archive. No install.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BUILD_PATH="${WIDEAWAKE_BUILD_PATH:-$ROOT/.build}"
+VERSION="$(/usr/bin/plutil -extract CFBundleShortVersionString raw -o - "$ROOT/Resources/Info.plist")"
+ARCH="$(/usr/bin/uname -m)"
+NAME="WideAwake-$VERSION-$ARCH"
+mkdir -p "$ROOT/dist"
+STAGE="$(mktemp -d "$ROOT/dist/.package.XXXXXX")"
+trap 'rm -rf "$STAGE"' EXIT
+/usr/bin/swift build --package-path "$ROOT" -c release --scratch-path "$BUILD_PATH"
+BIN="$(/usr/bin/swift build --package-path "$ROOT" -c release --scratch-path "$BUILD_PATH" --show-bin-path)/WideAwake"
+PACKAGE="$STAGE/$NAME"
+APP="$PACKAGE/WideAwake.app"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$PACKAGE/scripts"
+cp "$BIN" "$APP/Contents/MacOS/WideAwake"
+cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
+cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+/usr/bin/plutil -lint "$APP/Contents/Info.plist"
+/usr/bin/codesign --force --sign - --deep "$APP"
+/usr/bin/codesign --verify --strict --deep "$APP"
+cp "$ROOT/scripts/install.sh" "$ROOT/scripts/uninstall.sh" "$ROOT/scripts/backstop.sh" "$PACKAGE/scripts/"
+cp "$ROOT/README.md" "$ROOT/LICENSE" "$ROOT/NOTICE" "$ROOT/CHANGELOG.md" "$PACKAGE/"
+cp -R "$ROOT/docs" "$PACKAGE/docs"
+/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$PACKAGE" "$STAGE/$NAME.zip"
+# Publish only after assembly, signature verification and archiving succeed.
+mv "$STAGE/$NAME.zip" "$ROOT/dist/$NAME.zip"
+cd "$ROOT/dist"
+/usr/bin/shasum -a 256 "$NAME.zip" > "$NAME.zip.sha256"
+echo "$ROOT/dist/$NAME.zip"

@@ -1,0 +1,24 @@
+name: Verify
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Release build and regression tests
+        run: swift test -c release
+      - name: Installer rollback and shell checks
+        run: |
+          python3 scripts/tests/test_install_replacement.py
+          python3 scripts/tests/test_install_permissions.py
+          bash -n scripts/install.sh scripts/uninstall.sh scripts/backstop.sh scripts/package.sh
+      - name: Assemble and verify release archive
+        run: ./scripts/package.sh
