@@ -21,7 +21,7 @@ cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 /usr/bin/codesign --force --sign - --deep "$APP"
 /usr/bin/codesign --verify --strict --deep "$APP"
 cp "$ROOT/scripts/install.sh" "$ROOT/scripts/uninstall.sh" "$ROOT/scripts/backstop.sh" "$PACKAGE/scripts/"
-cp "$ROOT/README.md" "$ROOT/LICENSE" "$ROOT/NOTICE" "$ROOT/CHANGELOG.md" "$PACKAGE/"
+cp "$ROOT/README.md" "$ROOT/LICENSE" "$ROOT/CHANGELOG.md" "$PACKAGE/"
 cp -R "$ROOT/docs" "$PACKAGE/docs"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$PACKAGE" "$STAGE/$NAME.zip"
 # Publish only after assembly, signature verification and archiving succeed.
