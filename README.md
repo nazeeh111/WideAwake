@@ -82,4 +82,4 @@ python3 scripts/tests/test_install_replacement.py
 
 ## License
 
-[MIT license](LICENSE). Retained source provenance and contribution scope are recorded in [NOTICE](NOTICE).
+[MIT license](LICENSE).
