@@ -6,6 +6,8 @@ WideAwake is a small native macOS menu bar timer for keeping a MacBook awake wit
 
 <p align="center"><img src="docs/panel-ready.png" alt="WideAwake timer with battery status and editable battery limits" width="360"></p>
 
+This preview has checked native panels and controlled power-state behavior. **Physical closed-lid operation still needs hardware validation.** [Verification record](docs/VERIFICATION.md).
+
 ## Use it
 
 1. Click the sunrise in the menu bar.
