@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 /// Atomic JSON persistence for the three files WideAwake keeps on disk.
@@ -30,9 +31,46 @@ struct Store: Sendable {
     /// Returns nil when the file does not exist. Throws on unreadable or
     /// undecodable content.
     func read<T: Decodable>(_ type: T.Type, from url: URL) throws -> T? {
-        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-        let data = try Data(contentsOf: url)
+        guard let data = try capture(from: url) else { return nil }
         return try Store.makeDecoder().decode(T.self, from: data)
+    }
+
+    /// Captured data belongs to one opened file description, even if its path changes.
+    func capture(from url: URL) throws -> Data? {
+        // Capture and validate one descriptor before decoding those exact bytes.
+        // Nonblocking open rejects FIFOs without waiting for another process.
+        let fd = open(url.path, O_RDONLY | O_NONBLOCK | O_NOFOLLOW | O_CLOEXEC)
+        if fd < 0 {
+            if errno == ENOENT { return nil }
+            throw StoreError.read(file: url.path, detail: String(cString: strerror(errno)))
+        }
+        defer { close(fd) }
+        var info = stat()
+        guard fstat(fd, &info) == 0 else {
+            throw StoreError.read(file: url.path, detail: String(cString: strerror(errno)))
+        }
+        guard info.st_mode & S_IFMT == S_IFREG else {
+            throw StoreError.read(file: url.path, detail: "not a regular file")
+        }
+        let limit = 8 * 1024 * 1024
+        guard info.st_size >= 0, info.st_size <= limit else {
+            throw StoreError.read(file: url.path, detail: "file exceeds 8 MiB")
+        }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 65536)
+        while true {
+            let count = Darwin.read(fd, &buffer, buffer.count)
+            if count < 0 {
+                if errno == EINTR { continue }
+                throw StoreError.read(file: url.path, detail: String(cString: strerror(errno)))
+            }
+            if count == 0 { break }
+            guard data.count + count <= limit else {
+                throw StoreError.read(file: url.path, detail: "file exceeds 8 MiB")
+            }
+            data.append(contentsOf: buffer.prefix(count))
+        }
+        return data
     }
 
     /// Atomic write: temp file + rename(2).
@@ -97,11 +135,14 @@ struct Store: Sendable {
 enum StoreError: Error, LocalizedError {
     case rename(from: String, to: String, errno: Int32)
     case corrupt(file: String, detail: String)
+    case read(file: String, detail: String)
 
     var errorDescription: String? {
         switch self {
         case let .rename(from, to, errno):
             return "rename \(from) -> \(to) failed: \(String(cString: strerror(errno)))"
+        case let .read(file, detail):
+            return "\(file) could not be read (\(detail)); it was left in place"
         case let .corrupt(file, detail):
             return "\(file) could not be decoded (\(detail)); it was left in place"
         }

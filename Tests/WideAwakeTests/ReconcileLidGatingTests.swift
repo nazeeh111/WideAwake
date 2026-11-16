@@ -23,6 +23,7 @@ final class ReconcileLidGatingTests: XCTestCase {
         st.savedDisplayBrightness = 0.8
         st.savedKeyboardBrightness = 0.3
         try h.store.saveState(st)
+        h.guardFake.sleepDisabled = true
         return s
     }
 
@@ -46,7 +47,7 @@ final class ReconcileLidGatingTests: XCTestCase {
         XCTAssertEqual(after.savedDisplayBrightness, 0.8)
         XCTAssertEqual(after.savedKeyboardBrightness, 0.3)
         XCTAssertEqual(m.state, after)
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1"])
+        XCTAssertEqual(h.guardFake.calls, ["pmset -g"])
     }
 
     /// A journal holding only saved brightness (no freeze, no audio) is
@@ -60,6 +61,7 @@ final class ReconcileLidGatingTests: XCTestCase {
         st.savedDisplayBrightness = 0.8
         st.savedKeyboardBrightness = 0.3
         try h.store.saveState(st)
+        h.guardFake.sleepDisabled = true
         h.clamshell.closed = true
         let m = h.makeManager()
         await m.reconcile()
@@ -77,13 +79,16 @@ final class ReconcileLidGatingTests: XCTestCase {
     func testLidOpenResumesFrozenPidsAndRestoresAudio() async throws {
         let s = try seedValidSessionWithLidActions()
         h.clamshell.closed = false
+        try h.audio.mute()
+        h.display.brightness = 0
+        h.keyboard.brightness = 0
         let m = h.makeManager()
         await m.reconcile()
 
         XCTAssertEqual(m.session, s)
         XCTAssertEqual(h.procs.resumed, [[111, 222]])
         XCTAssertEqual(h.audio.applied.count, 1)
-        XCTAssertEqual(h.audio.applied.first?.volume, 0.4)
+        XCTAssertEqual(h.audio.applied.first?.volume, 0.6)
         XCTAssertEqual(h.display.wakes, 1)
         XCTAssertEqual(h.display.sets, [0.8])
         XCTAssertEqual(h.keyboard.sets, [0.3])

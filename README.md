@@ -108,3 +108,43 @@ The 0.2.0 clip shows the original timer and custom ranges. Use the screenshots a
 ## License
 
 [MIT license](LICENSE).
+
+
+### Inspecting recovery state
+
+The executable accepts `WideAwake --inspect-recovery DIRECTORY` to print a
+read-only JSON inspection of `session.json` and `state.json` in the supplied
+directory. It reports stored session and journal entries separately from
+hardware observation and effect attempts, which it does not perform. The two
+file reads are not an atomic snapshot. Missing files mean missing evidence,
+not proof of a clean machine; unreadable input returns exit status 2 and is
+left in place. The Swift reader requires regular files, refuses symlinks and
+limits each file to 8 MiB.
+
+A new session refuses to claim an already-disabled sleep setting without a
+journal proving ownership. A live session is left untouched if its observed sleep setting disagrees with
+the ownership journal or cannot be observed. Existing unreadable session files
+are preserved and block start, reconcile and end until repaired.
+Recovery preserves an observed nonzero display or keyboard brightness and
+observed changes after a restore; it preserves current audio volume and an
+observed unmute. This conservative policy can leave an automatically changed
+brightness in place. Hardware state can change between observation and an
+effect, and a value changed away and back cannot be distinguished; this is
+not a guarantee against concurrent changes. Existing shell recovery tools are
+separate implementations and are not covered by the Swift file-read bound.
+
+Duration changes require the in-memory session to match the saved session
+before and after recovery-agent arming. Session dates are serialized at
+whole-second precision, so this comparison does not distinguish changes
+within that precision. The recovery lock coordinates cooperating writers;
+it does not prevent an uncooperative writer changing a file between checks.
+Low Power Mode release observes the current setting first and keeps its
+journal entry if observation, the effect, or journal clearing fails.
+
+A start or recovery that resumes after a suspended operation rechecks the
+saved session generation and deadline. If End finds a different or unreadable
+session, it refuses to delete it or undo the old journal automatically. Resolve
+the conflicting record explicitly, then retry recovery. A failed start only
+undoes its own sleep hold and keeps prior recovery entries. These checks do not
+identify replacements with the same persisted representation or prevent an
+uncooperative writer changing files after the last check.

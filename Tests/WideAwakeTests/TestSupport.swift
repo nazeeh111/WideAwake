@@ -58,6 +58,7 @@ final class FakeSleepGuard: SleepGuarding, @unchecked Sendable {
     private var _lowPowerGate: AsyncGate?
     private var _sleepGate: AsyncGate?
     private var _readGate: AsyncGate?
+    private var _lowPowerReadGate: AsyncGate?
     var throwOn: Set<String> = []
     /// Commands that take effect and *then* fail (a timeout after pmset
     /// already applied the setting): the ambiguous failure shape.
@@ -87,6 +88,11 @@ final class FakeSleepGuard: SleepGuarding, @unchecked Sendable {
     var readGate: AsyncGate? {
         get { lock.withLock { _readGate } }
         set { lock.withLock { _readGate = newValue } }
+    }
+
+    var lowPowerReadGate: AsyncGate? {
+        get { lock.withLock { _lowPowerReadGate } }
+        set { lock.withLock { _lowPowerReadGate = newValue } }
     }
 
     private func record(_ c: String) throws {
@@ -124,6 +130,7 @@ final class FakeSleepGuard: SleepGuarding, @unchecked Sendable {
 
     func isLowPowerModeOn() async throws -> Bool {
         try record("pmset -g custom")
+        if let gate = lowPowerReadGate { await gate.wait() }
         return lowPowerOn
     }
 }
@@ -219,12 +226,11 @@ final class FakeAudioControl: AudioControlling, @unchecked Sendable {
         return lock.withLock { (_volume, _muted) }
     }
 
-    func apply(volume: Float, muted: Bool) throws {
+    func setMuted(_ muted: Bool) throws {
         if throwOnApply { throw AudioControlError(what: "apply", status: -1) }
         lock.withLock {
-            _volume = volume
             _muted = muted
-            _applied.append((volume, muted))
+            _applied.append((_volume, muted))
         }
     }
 
