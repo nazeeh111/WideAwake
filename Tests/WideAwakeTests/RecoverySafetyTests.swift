@@ -401,10 +401,24 @@ final class RecoverySafetyTests: XCTestCase {
         let locked = await m.end(reason: .quit)
         XCTAssertEqual(locked, .locked)
         XCTAssertFalse(m.quitRequested, "quit stays requested although the app has to stay for the retry")
+        // Hold restoration after the retry has cleared its in-memory session.
+        let restoreRead = AsyncGate()
+        h.guardFake.readGate = restoreRead
         held.release()
 
         let deadline = Date().addingTimeInterval(5)
         while m.isActive, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        // Inactive is not restored: cleanup is still suspended at the fake read.
+        XCTAssertFalse(m.isActive, "retry never entered restoration")
+        XCTAssertEqual(m.pendingEnd, .quit)
+        XCTAssertEqual(try h.store.loadState()?.sleepDisabledByUs, true)
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1"])
+        await restoreRead.open()
+
+        // Use the same original deadline and wait for the actual end transaction.
+        while (m.pendingEnd != nil || m.state.isDirty), Date() < deadline {
             try await Task.sleep(for: .milliseconds(50))
         }
         XCTAssertFalse(m.isActive, "pending end was never retried")

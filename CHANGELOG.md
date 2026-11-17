@@ -4,9 +4,9 @@
 
 - Integrate the reviewed recovery ownership and session-generation checks. Preserve unreadable or conflicting saved sessions, observed external settings where distinguishable, and recovery entries whose observation, restoration or clearing failed. These checks do not prevent every uncooperative concurrent change.
 - Add read-only `--inspect-recovery DIRECTORY` JSON reports with bounded regular-file reads and symlink refusal, without observing hardware or attempting effects. Use semantic native label colors for blocked, recovery and invalid-settings messages.
-- Leave Open at Login off for new configurations and older files with no saved choice. Preserve an explicitly saved opt-in or opt-out. Existing timer ranges, battery defaults and safeguards are unchanged.
+- Leave Open at Login off for new configurations and older files with no saved choice. Preserve existing saved true and false values. Existing timer ranges, battery defaults and safeguards are unchanged.
 - Add the controlled native case and later unlocked follow-up: expiry, Turn off, injected-open reset, panel reopening and disposable-host relaunch. Hardware effects remain simulated; the private follow-up clock correction is not a shipping app change.
-- Package the opt-in repair and its tests together with the source-bound case, follow-up documents and earlier evidence in a locally signed arm64 preview. The package is not Apple notarized and does not establish physical closed-lid operation.
+- Package the app, installer scripts, source-bound case, follow-up documents and earlier evidence in a locally signed arm64 preview. Regression tests remain in the source repository and source archives. The package is not Apple notarized and does not establish physical closed-lid operation.
 
 ## 0.3.0 · 26 October 2026
 
