@@ -1,0 +1,9 @@
+{
+  "source_parent": "6588f67464fe0d66b2b6bef320d0e927c72f3ecc",
+  "scope": "Recorded whole-second session timestamps; all effects simulated. Scheduled deadlines, not observed physical or visual expiry.",
+  "ready_deadline_seconds": 60.0,
+  "running_deadline_seconds": 107.0,
+  "selected_seconds": 60,
+  "close_seconds_from_selected_deadline": 47.0,
+  "deadline_shift_seconds": 47.0
+}

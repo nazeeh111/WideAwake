@@ -1,0 +1,8 @@
+{
+  "dockerFrozen" : false,
+  "frozenProcesses" : [
+
+  ],
+  "lowPowerSetByUs" : false,
+  "sleepDisabledByUs" : true
+}

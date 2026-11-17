@@ -2,11 +2,19 @@
 
 <p align="center"><a href="https://github.com/nazeeh111/WideAwake/releases/tag/v0.3.0">Download preview</a> · <a href="#install">Install</a> · <a href="#how-it-works">How it works</a> · <a href="LICENSE">MIT license</a></p>
 
-WideAwake is a small native macOS menu bar timer for keeping a MacBook awake with the lid closed. Choose a duration using a slider you can customize. The defaults are **15-minute steps up to 6 hours**. Reopening the lid stops the timer and resets the slider to Off.
+WideAwake is a small native macOS menu bar timer intended to keep a MacBook awake with the lid closed. Choose a duration using a slider you can customize. The defaults are **15-minute steps up to 6 hours**. Reopening the lid stops the timer and resets the slider to Off.
 
 <p align="center"><img src="docs/panel-ready.png" alt="WideAwake timer with battery status and editable battery limits" width="360"></p>
 
 This preview has checked native panels and controlled power-state behavior. **Physical closed-lid operation still needs hardware validation.** [Verification record](docs/VERIFICATION.md).
+
+## A native control case
+
+The shipping AppKit panel was exercised in a task-owned preview with **simulated hardware effects**. One-minute settings keep the case bounded; the product defaults remain 15-minute steps up to 6 hours. The preview never invokes the live registration, power, audio, display or launchd services. No lid was moved and no macOS setting was changed.
+
+<picture><source media="(max-width:600px)" srcset="docs/native-case/deadline-mobile.png"><img src="docs/native-case/deadline.png" alt="A one-minute simulated native control: Ready schedules sixty seconds, then a simulated lid event shifts the deadline by forty-seven seconds and schedules a full minute. These are scheduled deadlines; expiry was not visually verified."></picture>
+
+[Current source, injected effects and exact recorded route](docs/native-case/README.md). The controlled states establish software behavior, not physical closed-lid operation. The existing screenshots and verification below retain their original scope.
 
 ## Use it
 
@@ -50,7 +58,7 @@ Download and unpack the [latest release](https://github.com/nazeeh111/WideAwake/
 ./scripts/install.sh --app ./WideAwake.app
 ```
 
-On first installation, the installer asks for an administrator password to grant exactly four power commands: enable/disable sleep prevention and enable/disable battery Low Power Mode. Updates reuse those grants after checking all four, without rewriting the permission rules. It installs the app in `~/Applications`, a recovery job in your user account, and support files in `~/Library/Application Support/WideAwake`. The app registers with macOS Open at Login. Notifications are optional.
+On first installation, the installer asks for an administrator password to grant exactly four power commands: enable/disable sleep prevention and enable/disable battery Low Power Mode. Updates reuse those grants after checking all four, without rewriting the permission rules. It installs the app in `~/Applications`, a recovery job in your user account, and support files in `~/Library/Application Support/WideAwake`. Current source leaves Open at Login off for new configurations and configurations with no saved choice. Enable it yourself in macOS if wanted. An explicitly saved `launchAtLogin:true` remains honored. The existing 0.3.0 download predates this default repair and can register automatically; this paragraph describes the current source, not a rebuilt release. Notifications are optional.
 
 This preview is locally signed, **not Apple notarized**. If macOS blocks it, review the source and use the normal Privacy & Security controls if you choose to proceed. The installer verifies the bundle signature before replacing an installation. Keep the unpacked folder for uninstalling.
 
