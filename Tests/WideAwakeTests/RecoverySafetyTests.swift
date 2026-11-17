@@ -66,7 +66,7 @@ final class RecoverySafetyTests: XCTestCase {
     func testLateReconcileMustNotClearNewSessionSleepGuard() async throws {
         let gate = AsyncGate()
         h.guardFake.readGate = gate
-        h.guardFake.sleepDisabled = true // stale flag from a crashed run
+        h.guardFake.sleepDisabled = false // no owned setting before the new session
         let m = h.makeManager()
 
         let reconcile = Task { await m.reconcile() }
@@ -79,7 +79,7 @@ final class RecoverySafetyTests: XCTestCase {
 
         XCTAssertTrue(m.isActive)
         XCTAssertTrue(h.guardFake.sleepDisabled, "the new session's sleep guard was cleared by the late reconcile")
-        XCTAssertEqual(h.guardFake.calls, ["pmset -g", "disablesleep 0", "disablesleep 1"])
+        XCTAssertEqual(h.guardFake.calls, ["pmset -g", "pmset -g", "disablesleep 1"])
         XCTAssertEqual(try h.store.loadState()?.sleepDisabledByUs, true)
     }
 
@@ -101,7 +101,7 @@ final class RecoverySafetyTests: XCTestCase {
 
         XCTAssertFalse(changed, "a Low Power change that lands after an end request must not be announced as ours")
         XCTAssertFalse(h.guardFake.lowPowerOn, "Low Power Mode left on with a clean journal")
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "pmset -g custom", "lowpowermode 1", "disablesleep 0", "lowpowermode 0"])
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1", "pmset -g custom", "lowpowermode 1", "disablesleep 0", "pmset -g custom", "lowpowermode 0"])
         XCTAssertEqual(try h.store.loadState(), RuntimeState.clean)
         XCTAssertNil(m.session)
     }
@@ -123,7 +123,7 @@ final class RecoverySafetyTests: XCTestCase {
 
         XCTAssertNil(m.session)
         XCTAssertFalse(h.guardFake.sleepDisabled, "sleep left disabled after the end completed")
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "disablesleep 0"])
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1", "disablesleep 0"])
         XCTAssertNil(try h.store.loadSession())
         XCTAssertEqual(try h.store.loadState(), RuntimeState.clean)
     }
@@ -205,7 +205,7 @@ final class RecoverySafetyTests: XCTestCase {
 
         XCTAssertNil(m.session)
         XCTAssertFalse(h.guardFake.sleepDisabled, "sleep left disabled after a failed start")
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "disablesleep 0"])
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1", "disablesleep 0"])
         XCTAssertNil(try h.store.loadSession())
         XCTAssertEqual(try h.store.loadState(), RuntimeState.clean)
         XCTAssertTrue(try XCTUnwrap(m.lastError).contains("disable sleep"), m.lastError ?? "")
@@ -276,7 +276,7 @@ final class RecoverySafetyTests: XCTestCase {
 
         XCTAssertNil(m.session)
         XCTAssertFalse(h.guardFake.sleepDisabled, "old ownership erased by the abandoned start, so the end never restored it")
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 0"])
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 0"])
         XCTAssertEqual(try h.store.loadState(), RuntimeState.clean)
     }
 
@@ -302,7 +302,7 @@ final class RecoverySafetyTests: XCTestCase {
         await m.end(reason: .user)
         XCTAssertTrue(h.guardFake.calls.contains("lowpowermode 0"), "\(h.guardFake.calls)")
         XCTAssertFalse(h.guardFake.lowPowerOn)
-        XCTAssertEqual(h.audio.applied.first?.volume, 0.4)
+        XCTAssertEqual(h.audio.volume, 0.6)
         XCTAssertEqual(try h.store.loadState(), RuntimeState.clean)
     }
 
@@ -361,7 +361,7 @@ final class RecoverySafetyTests: XCTestCase {
         let outcome = await m.end(reason: .user)
 
         XCTAssertEqual(outcome, .locked)
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1"], "pmset ran without the lock")
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1"], "pmset ran without the lock")
         XCTAssertTrue(h.guardFake.sleepDisabled)
         XCTAssertEqual(try h.store.loadSession(), session, "session.json touched without the lock")
         XCTAssertEqual(try h.store.loadState(), stateBefore, "journal written without the lock")
@@ -401,14 +401,28 @@ final class RecoverySafetyTests: XCTestCase {
         let locked = await m.end(reason: .quit)
         XCTAssertEqual(locked, .locked)
         XCTAssertFalse(m.quitRequested, "quit stays requested although the app has to stay for the retry")
+        // Hold restoration after the retry has cleared its in-memory session.
+        let restoreRead = AsyncGate()
+        h.guardFake.readGate = restoreRead
         held.release()
 
         let deadline = Date().addingTimeInterval(5)
         while m.isActive, Date() < deadline {
             try await Task.sleep(for: .milliseconds(50))
         }
+        // Inactive is not restored: cleanup is still suspended at the fake read.
+        XCTAssertFalse(m.isActive, "retry never entered restoration")
+        XCTAssertEqual(m.pendingEnd, .quit)
+        XCTAssertEqual(try h.store.loadState()?.sleepDisabledByUs, true)
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1"])
+        await restoreRead.open()
+
+        // Use the same original deadline and wait for the actual end transaction.
+        while (m.pendingEnd != nil || m.state.isDirty), Date() < deadline {
+            try await Task.sleep(for: .milliseconds(50))
+        }
         XCTAssertFalse(m.isActive, "pending end was never retried")
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "disablesleep 0"])
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1", "disablesleep 0"])
         XCTAssertEqual(try h.store.loadState(), RuntimeState.clean)
         XCTAssertNil(m.pendingEnd)
     }
@@ -424,7 +438,7 @@ final class RecoverySafetyTests: XCTestCase {
         held.release()
 
         await m.start(duration: 60)
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1"], "a second session started over a pending end")
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1"], "a second session started over a pending end")
         XCTAssertEqual(h.backstop.arms, 1)
     }
 
@@ -438,7 +452,7 @@ final class RecoverySafetyTests: XCTestCase {
         await m.start(duration: 3600)
         XCTAssertNil(m.session)
         XCTAssertNil(try h.store.loadSession())
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "disablesleep 0"])
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1", "disablesleep 0"])
     }
 
     /// A start that is queued when the quit arrives must not run through
@@ -461,7 +475,7 @@ final class RecoverySafetyTests: XCTestCase {
         XCTAssertNil(m.session)
         XCTAssertNil(try h.store.loadSession())
         XCTAssertFalse(h.guardFake.sleepDisabled)
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "disablesleep 0"])
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1", "disablesleep 0"])
     }
 
     // MARK: Corrupt journal
@@ -506,7 +520,7 @@ final class RecoverySafetyTests: XCTestCase {
         XCTAssertEqual(outcome, .journalUnreadable)
         XCTAssertEqual(m.session, session, "session dropped although nothing was undone")
         XCTAssertEqual(try h.store.loadSession(), session)
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1"], "pmset ran against an unreadable journal")
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1"], "pmset ran against an unreadable journal")
         XCTAssertTrue(h.guardFake.sleepDisabled)
         XCTAssertEqual(try Data(contentsOf: h.home.paths.stateFile), bytes, "the corrupt journal was rewritten")
         XCTAssertFalse(h.notifier.posts.contains { $0.body.contains("back to normal") }, "\(h.notifier.posts)")
@@ -520,7 +534,7 @@ final class RecoverySafetyTests: XCTestCase {
         try h.store.saveState(repaired)
         let second = await m.end(reason: .user)
         XCTAssertEqual(second, .restored)
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "disablesleep 0"])
+        XCTAssertEqual(h.guardFake.calls.filter { $0 != "pmset -g" }, ["disablesleep 1", "disablesleep 0"])
         XCTAssertFalse(h.guardFake.sleepDisabled)
         XCTAssertNil(m.pendingEnd)
     }

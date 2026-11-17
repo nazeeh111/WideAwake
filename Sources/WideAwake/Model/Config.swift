@@ -10,7 +10,7 @@ struct Config: Codable, Equatable, Sendable {
     var lowPowerFloor: Int = 40
     var endFloor: Int = 10
     var thermalRules: Bool = true
-    var launchAtLogin: Bool = true
+    var launchAtLogin: Bool = false
     var batterySettings: BatterySettings {
         BatterySettings(lowPowerPercent: lowPowerFloor, stopPercent: endFloor)
     }
@@ -33,7 +33,7 @@ struct Config: Codable, Equatable, Sendable {
         lowPowerFloor = try c.decodeIfPresent(Int.self, forKey: .lowPowerFloor) ?? 40
         endFloor = try c.decodeIfPresent(Int.self, forKey: .endFloor) ?? 10
         thermalRules = try c.decodeIfPresent(Bool.self, forKey: .thermalRules) ?? true
-        launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? true
+        launchAtLogin = try c.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
         if (try? batterySettings.validate()) == nil {
             lowPowerFloor = BatterySettings.defaults.lowPowerPercent
             endFloor = BatterySettings.defaults.stopPercent

@@ -1,5 +1,13 @@
 # Changes
 
+## 0.3.1 preview · 17 November 2026
+
+- Integrate the reviewed recovery ownership and session-generation checks. Preserve unreadable or conflicting saved sessions, observed external settings where distinguishable, and recovery entries whose observation, restoration or clearing failed. These checks do not prevent every uncooperative concurrent change.
+- Add read-only `--inspect-recovery DIRECTORY` JSON reports with bounded regular-file reads and symlink refusal, without observing hardware or attempting effects. Use semantic native label colors for blocked, recovery and invalid-settings messages.
+- Leave Open at Login off for new configurations and older files with no saved choice. Preserve existing saved true and false values. Existing timer ranges, battery defaults and safeguards are unchanged.
+- Add the controlled native case and later unlocked follow-up: expiry, Turn off, injected-open reset, panel reopening and disposable-host relaunch. Hardware effects remain simulated; the private follow-up clock correction is not a shipping app change.
+- Package the app, installer scripts, source-bound case, follow-up documents and earlier evidence in a locally signed arm64 preview. Regression tests remain in the source repository and source archives. The package is not Apple notarized and does not establish physical closed-lid operation.
+
 ## 0.3.0 · 26 October 2026
 
 - Edit both battery limits in Settings: Low Power Mode below 40% and stop below 10% by default. Saved values survive relaunch; invalid combinations cannot be saved.

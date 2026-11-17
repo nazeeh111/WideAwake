@@ -1,0 +1,110 @@
+{
+  "scope": "Native panel software control and scheduled deadlines; effects simulated, no physical or visual expiry proof. Harness compilation requires the full source repository.",
+  "files": [
+    {
+      "path": "LICENSE",
+      "bytes": 1104,
+      "sha256": "9d5fb9d93de43eb51ad825141ef6652141f96b8f19f1ef270451cc40914e9518"
+    },
+    {
+      "path": "NativeCase.swift",
+      "bytes": 6115,
+      "sha256": "bcf67f5814ebd2a4998a7367975106d5db6e99a3583746006702d9f79b86e662"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6522,
+      "sha256": "68a5b68c5bdb3cfd9c338e5e6d874a75939d220caa21854bc28b459a527fb644"
+    },
+    {
+      "path": "build-preview.py",
+      "bytes": 2980,
+      "sha256": "e94b44dc0f0adb315f5c215d073fd43dd5d8c6cbe54062e42f42e543a3d3b784"
+    },
+    {
+      "path": "deadline-mobile.html",
+      "bytes": 2229,
+      "sha256": "60bcb742e8e89f1cf24e9487b26ef76397d2ba489f4dd5bbd5559540f87be814"
+    },
+    {
+      "path": "deadline-mobile.png",
+      "bytes": 51283,
+      "sha256": "249b393099f12856f122152e2de8f85618a99a6d9e5a770bd521de99b9e919ae"
+    },
+    {
+      "path": "deadline-mobile.svg",
+      "bytes": 2077,
+      "sha256": "814f99331f03ab67867861e80227fbc5aadcecd6c1277312afd122e0c6bb64eb"
+    },
+    {
+      "path": "deadline.html",
+      "bytes": 2140,
+      "sha256": "1653365716f15fe4a19f4c49f4b64c1255ca7da37365293da21bd3a68bfa6a25"
+    },
+    {
+      "path": "deadline.png",
+      "bytes": 56632,
+      "sha256": "8e168d052bf3f9f5ca858867dbd1b07a54378786fb12edb3296d088dd6149537"
+    },
+    {
+      "path": "deadline.svg",
+      "bytes": 1988,
+      "sha256": "70f6313c4e43063edb1b9da8ae7247b011eaadc1405678e31d519f27c4a45f66"
+    },
+    {
+      "path": "figure-data.json",
+      "bytes": 385,
+      "sha256": "595033d2f0055482464608c3eec54780ad820971b597d35c6c755b8956d81e42"
+    },
+    {
+      "path": "figure.py",
+      "bytes": 2507,
+      "sha256": "b07e5023d9e938c4915381e8a0612a2aa955030022a96619e5b1a71edb2e4da4"
+    },
+    {
+      "path": "recorded/config.json",
+      "bytes": 269,
+      "sha256": "ac97a80fc58fde50eba216e8af2050e3dc96b6985ca833d978a8a5d96b32fec9"
+    },
+    {
+      "path": "recorded/journey.json",
+      "bytes": 2063,
+      "sha256": "c09c0800906e0e7d5df87fa9a1e7cfc51463bac5218cfc875e3122dbb015aa15"
+    },
+    {
+      "path": "recorded/ready-journal.json",
+      "bytes": 117,
+      "sha256": "14d7a92bc778b3984f1c590057ea8e168922741cd940ec7e08a052cee6a551be"
+    },
+    {
+      "path": "recorded/ready-session.json",
+      "bytes": 104,
+      "sha256": "8f969d4c3a874f5c4a47b914a49abd631b2886af92f65e1860e8c2570815ad37"
+    },
+    {
+      "path": "recorded/ready.png",
+      "bytes": 54510,
+      "sha256": "8c1a2e3c5a7828e6c2d7a9e70c61764c9cf01e5c4329efe72adc088e90c4226d"
+    },
+    {
+      "path": "recorded/running-journal.json",
+      "bytes": 117,
+      "sha256": "14d7a92bc778b3984f1c590057ea8e168922741cd940ec7e08a052cee6a551be"
+    },
+    {
+      "path": "recorded/running-session.json",
+      "bytes": 104,
+      "sha256": "5736c1142ccd74b8e7a6a93f9cf7f4291e114cad69ded55b5034fca76ea0445d"
+    },
+    {
+      "path": "recorded/running.png",
+      "bytes": 51419,
+      "sha256": "456bc96020d3ba0eee40d6718eab40e6b093b8059cd25041497f9c026e54b158"
+    },
+    {
+      "path": "verify.py",
+      "bytes": 1051,
+      "sha256": "e4a2e99fb4712df95a8487bee2b289418d0fc25695b9d4d1acadf739e5bf3f87"
+    }
+  ]
+}

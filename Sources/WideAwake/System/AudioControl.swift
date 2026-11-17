@@ -2,11 +2,10 @@ import AudioToolbox
 import CoreAudio
 import Foundation
 
-/// Default output device volume and mute, so lid close can mute and lid open
-/// can restore exactly (spec section 4).
+/// Observe the default output and change its mute state without rewriting volume.
 protocol AudioControlling: Sendable {
     func read() throws -> (volume: Float, muted: Bool)
-    func apply(volume: Float, muted: Bool) throws
+    func setMuted(_ muted: Bool) throws
     func mute() throws
 }
 
@@ -21,7 +20,7 @@ struct AudioControlError: Error, LocalizedError, Sendable {
 /// paths need no CoreAudio.
 struct NoopAudioControl: AudioControlling {
     func read() throws -> (volume: Float, muted: Bool) { (1, false) }
-    func apply(volume: Float, muted: Bool) throws {}
+    func setMuted(_ muted: Bool) throws {}
     func mute() throws {}
 }
 
@@ -36,10 +35,8 @@ struct CoreAudioControl: AudioControlling {
         return (Float(volume), muted != 0)
     }
 
-    func apply(volume: Float, muted: Bool) throws {
+    func setMuted(_ muted: Bool) throws {
         let device = try defaultOutputDevice()
-        var v = Float32(min(max(volume, 0), 1))
-        try set(device, Self.volumeAddress, &v, "set volume")
         var m: UInt32 = muted ? 1 : 0
         try set(device, Self.muteAddress, &m, "set mute")
     }

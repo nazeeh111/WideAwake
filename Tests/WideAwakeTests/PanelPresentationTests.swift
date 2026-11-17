@@ -21,6 +21,24 @@ import XCTest
         try png.write(to: root.appendingPathComponent(name + ".png"))
     }
 
+    private func assertReadable(_ panel: SliderPanel, containing text: String, appearance: NSAppearance.Name, background: CGFloat, name: String) throws {
+        panel.view.appearance = NSAppearance(named: appearance)
+        panel.view.layer?.backgroundColor = NSColor(white: background, alpha: 1).cgColor
+        let field = try XCTUnwrap(descendants(panel.view).compactMap { $0 as? NSTextField }.first { $0.stringValue.contains(text) })
+        var color: NSColor?
+        panel.view.effectiveAppearance.performAsCurrentDrawingAppearance { color = field.textColor?.usingColorSpace(.sRGB) }
+        let rgb = try XCTUnwrap(color)
+        func linear(_ x: CGFloat) -> CGFloat { x <= 0.04045 ? x / 12.92 : pow((x + 0.055) / 1.055, 2.4) }
+        let alpha = rgb.alphaComponent
+        func composite(_ channel: CGFloat) -> CGFloat { channel * alpha + background * (1 - alpha) }
+        let foreground = 0.2126 * linear(composite(rgb.redComponent)) + 0.7152 * linear(composite(rgb.greenComponent)) + 0.0722 * linear(composite(rgb.blueComponent))
+        let bg = linear(background)
+        let contrast = (max(foreground, bg) + 0.05) / (min(foreground, bg) + 0.05)
+        print("CONTRAST \(name): \(contrast) foreground=\(rgb) background=\(background)")
+        XCTAssertGreaterThanOrEqual(contrast, 4.5)
+        try capture(panel, name: name)
+    }
+
     func testSettingsValidationAndSaveThroughNativeControls() async throws {
         _ = NSApplication.shared
         let h = Harness(now: Date()); defer { h.home.destroy() }
@@ -52,7 +70,10 @@ import XCTest
         try capture(panel, name: "settings")
         stop.stringValue = "45"; panel.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification))
         XCTAssertFalse(save.isEnabled)
-        try capture(panel, name: "settings-invalid")
+        try assertReadable(panel, containing: "The stop percentage must be lower", appearance: .aqua, background: 0.96, name: "settings-invalid-light")
+        try assertReadable(panel, containing: "The stop percentage must be lower", appearance: .darkAqua, background: 0.16, name: "settings-invalid-dark")
+        panel.view.appearance = NSAppearance(named: .aqua)
+        panel.view.layer?.backgroundColor = NSColor(white: 0.96, alpha: 1).cgColor
         low.stringValue = "25"; stop.stringValue = "5"
         panel.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification))
         XCTAssertTrue(save.isEnabled)
@@ -75,7 +96,10 @@ import XCTest
         panel.view.layer?.backgroundColor = NSColor(white: 0.96, alpha: 1).cgColor
         panel.enable()
         XCTAssertTrue(panel.slider.isEnabled)
-        try capture(panel, name: "panel-low-battery")
+        try assertReadable(panel, containing: "Battery", appearance: .aqua, background: 0.96, name: "low-battery-light")
+        try assertReadable(panel, containing: "Battery", appearance: .darkAqua, background: 0.16, name: "low-battery-dark")
+        panel.view.appearance = NSAppearance(named: .aqua)
+        panel.view.layer?.backgroundColor = NSColor(white: 0.96, alpha: 1).cgColor
         await c.choose(1); panel.refresh()
         XCTAssertEqual(c.phase, .blocked)
         power.value = PowerSnapshot(percent: 9, isCharging: true)
@@ -88,7 +112,8 @@ import XCTest
         let retry = try XCTUnwrap(descendants(panel.view).compactMap { $0 as? NSButton }.first { $0.title == "Retry" })
         XCTAssertTrue(retry.isEnabled)
         XCTAssertFalse(panel.slider.isEnabled)
-        try capture(panel, name: "panel-recovery")
+        try assertReadable(panel, containing: "could not restore sleep", appearance: .aqua, background: 0.96, name: "recovery-light")
+        try assertReadable(panel, containing: "could not restore sleep", appearance: .darkAqua, background: 0.16, name: "recovery-dark")
         h.guardFake.throwOn = []
         await c.stop(); panel.refresh()
         XCTAssertTrue(panel.slider.isEnabled)

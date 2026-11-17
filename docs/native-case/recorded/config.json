@@ -1,0 +1,14 @@
+{
+  "darkenDisplayOnLidClose" : true,
+  "defaultPreset" : 1800,
+  "endFloor" : 10,
+  "launchAtLogin" : false,
+  "lowPowerFloor" : 40,
+  "lowPowerOnLidClose" : true,
+  "maxDuration" : 60,
+  "presets" : [
+    1800
+  ],
+  "sliderStepMinutes" : 1,
+  "thermalRules" : true
+}

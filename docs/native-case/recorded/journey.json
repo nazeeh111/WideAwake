@@ -1,0 +1,100 @@
+[
+  {
+    "active" : false,
+    "event" : "shown",
+    "fake_effect_calls" : [
+
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794923808.7972121
+  },
+  {
+    "active" : false,
+    "event" : "initial",
+    "fake_effect_calls" : [
+
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794923808.8577671
+  },
+  {
+    "active" : false,
+    "event" : "transition",
+    "fake_effect_calls" : [
+
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "arming",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794923812.813071
+  },
+  {
+    "active" : true,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "ready",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794923812.8825779
+  },
+  {
+    "active" : true,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "running",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794923859.5166049
+  },
+  {
+    "active" : true,
+    "event" : "simulated-close",
+    "fake_effect_calls" : [
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "running",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794923859.553896
+  },
+  {
+    "active" : true,
+    "event" : "shown",
+    "fake_effect_calls" : [
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "running",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794923859.6360021
+  }
+]
