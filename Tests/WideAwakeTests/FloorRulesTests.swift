@@ -166,7 +166,7 @@ final class FloorRuleDriverTests: XCTestCase {
         let driver = FloorRuleDriver(manager: m, notifier: h.notifier)
         await driver.run(percent: 35, isCharging: false, thermal: .nominal, lidClosed: false)
         // The current mode is read before it is taken over.
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "pmset -g custom", "lowpowermode 1"])
+        XCTAssertEqual(h.guardFake.calls, ["pmset -g", "disablesleep 1", "pmset -g custom", "lowpowermode 1"])
         XCTAssertEqual(try h.store.loadState()?.lowPowerSetByUs, true)
         XCTAssertEqual(h.notifier.posts.last?.title, "Low Power Mode on")
         XCTAssertTrue(h.notifier.posts.last?.body.contains("35%") ?? false)
@@ -251,7 +251,7 @@ final class FloorRuleDriverTests: XCTestCase {
         let driver = FloorRuleDriver(manager: m, notifier: h.notifier)
         await driver.run(percent: 35, isCharging: false, thermal: .nominal, lidClosed: false)
 
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "pmset -g custom"])
+        XCTAssertEqual(h.guardFake.calls, ["pmset -g", "disablesleep 1", "pmset -g custom"])
         XCTAssertEqual(try h.store.loadState()?.lowPowerSetByUs, false)
         XCTAssertFalse(h.notifier.posts.contains { $0.title == "Low Power Mode on" })
 
@@ -284,7 +284,7 @@ final class FloorRuleDriverTests: XCTestCase {
         let changed = await m.setLowPower(true)
 
         XCTAssertFalse(changed)
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "pmset -g custom", "lowpowermode 1", "lowpowermode 0"])
+        XCTAssertEqual(h.guardFake.calls, ["pmset -g", "disablesleep 1", "pmset -g custom", "lowpowermode 1", "pmset -g custom", "lowpowermode 0"])
         XCTAssertFalse(h.guardFake.lowPowerOn, "Low Power Mode left on after its command failed")
         XCTAssertEqual(try h.store.loadState()?.lowPowerSetByUs, false)
     }
@@ -316,7 +316,7 @@ final class FloorRuleDriverTests: XCTestCase {
         await m.start(duration: 3600)
         let driver = FloorRuleDriver(manager: m, notifier: h.notifier)
         await driver.run(percent: 80, isCharging: true, thermal: .nominal, lidClosed: true)
-        XCTAssertEqual(h.guardFake.calls, ["disablesleep 1", "pmset -g custom", "lowpowermode 1"])
+        XCTAssertEqual(h.guardFake.calls, ["pmset -g", "disablesleep 1", "pmset -g custom", "lowpowermode 1"])
         XCTAssertTrue(h.guardFake.lowPowerOn)
         XCTAssertEqual(try h.store.loadState()?.lowPowerSetByUs, true)
         XCTAssertFalse(h.notifier.posts.contains { $0.title == "Low Power Mode on" })

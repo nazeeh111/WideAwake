@@ -13,13 +13,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 5278,
-      "sha256": "ec3d64c39484f8975fd45df5902a4a569551be0da0a3c2db18fa93c4dce133b1"
+      "bytes": 6522,
+      "sha256": "68a5b68c5bdb3cfd9c338e5e6d874a75939d220caa21854bc28b459a527fb644"
     },
     {
       "path": "build-preview.py",
-      "bytes": 2436,
-      "sha256": "bb3d4e9df1ef2860903505e3c965af126ed8382840fc4aa9401b28a6575816cc"
+      "bytes": 2980,
+      "sha256": "e94b44dc0f0adb315f5c215d073fd43dd5d8c6cbe54062e42f42e543a3d3b784"
     },
     {
       "path": "deadline-mobile.html",

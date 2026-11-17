@@ -1,0 +1,371 @@
+[
+  {
+    "active" : false,
+    "event" : "shown",
+    "fake_effect_calls" : [
+
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927723.8293099
+  },
+  {
+    "active" : false,
+    "event" : "initial",
+    "fake_effect_calls" : [
+
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927723.8583131
+  },
+  {
+    "active" : false,
+    "event" : "transition",
+    "fake_effect_calls" : [
+
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "arming",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794927726.6716261
+  },
+  {
+    "active" : true,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "ready",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794927726.7166071
+  },
+  {
+    "active" : true,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "running",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794927732.984247
+  },
+  {
+    "active" : true,
+    "event" : "simulated-close",
+    "fake_effect_calls" : [
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "running",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794927733.013479
+  },
+  {
+    "active" : true,
+    "event" : "shown",
+    "fake_effect_calls" : [
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "running",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794927733.0885229
+  },
+  {
+    "active" : true,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "stopping",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927830.395875
+  },
+  {
+    "active" : false,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927830.4415011
+  },
+  {
+    "active" : false,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927830.4630041
+  },
+  {
+    "active" : false,
+    "event" : "simulated-open",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927848.400408
+  },
+  {
+    "active" : false,
+    "event" : "shown",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927848.509105
+  },
+  {
+    "active" : false,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "arming",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794927851.3577399
+  },
+  {
+    "active" : true,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "ready",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794927851.408097
+  },
+  {
+    "active" : true,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "running",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794927862.8956289
+  },
+  {
+    "active" : true,
+    "event" : "simulated-close",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "running",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794927862.9258809
+  },
+  {
+    "active" : true,
+    "event" : "shown",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "running",
+    "real_system_effects" : false,
+    "selected_seconds" : 60,
+    "steps" : 1,
+    "wall_time" : 1794927863.0002961
+  },
+  {
+    "active" : true,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1"
+    ],
+    "journal_dirty" : true,
+    "notice" : "",
+    "phase" : "stopping",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927871.3466949
+  },
+  {
+    "active" : false,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927871.3817461
+  },
+  {
+    "active" : false,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927871.4002662
+  },
+  {
+    "active" : false,
+    "event" : "simulated-open",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927871.4181881
+  },
+  {
+    "active" : false,
+    "event" : "shown",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927871.4541621
+  },
+  {
+    "active" : false,
+    "event" : "transition",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927879.2373409
+  },
+  {
+    "active" : false,
+    "event" : "quit",
+    "fake_effect_calls" : [
+      "disablesleep 1",
+      "disablesleep 0",
+      "disablesleep 1",
+      "disablesleep 0"
+    ],
+    "journal_dirty" : false,
+    "notice" : "",
+    "phase" : "idle",
+    "real_system_effects" : false,
+    "selected_seconds" : 0,
+    "steps" : 0,
+    "wall_time" : 1794927879.2647982
+  }
+]

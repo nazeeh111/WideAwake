@@ -33,6 +33,12 @@ enum EndOutcome: Sendable, Equatable {
     /// undone, but a relaunch would find a valid session and hold sleep
     /// again, so the end is retried in process and quit is refused.
     case sessionRetained
+    /// session.json cannot be read. No effect was attempted and the file
+    /// stays in place until repaired or moved by a person.
+    case sessionUnreadable
+    /// The saved session differs from the generation being ended; no effect
+    /// was attempted and both the saved record and journal remain in place.
+    case sessionChanged
     /// state.json cannot be read. Nothing was changed: WideAwake does not
     /// know what to undo and will not guess. The session stays active until
     /// a person fixes or moves the file.
@@ -64,6 +70,9 @@ enum TransactionRefusal: Error, Sendable {
 @Observable
 final class SessionManager {
     private(set) var session: Session?
+    @ObservationIgnored private var inFlightStart: Session?
+    @ObservationIgnored private var pendingSession: Session?
+    @ObservationIgnored private var pendingTransitionFailure: String?
     private(set) var state: RuntimeState
     var config: Config
     /// Minute-granularity remaining time for the popover ("2h 14m").
@@ -72,6 +81,8 @@ final class SessionManager {
     private(set) var countdownText: String = ""
     /// Last failure worth showing in the menu; cleared on the next success.
     private(set) var lastError: String?
+    /// Errors from the current serialized recovery attempt, including its trigger.
+    @ObservationIgnored private var recoveryFailures: [String]?
     private(set) var lastEndReason: EndReason?
     private let powerSnapshot: @Sendable () -> PowerSnapshot
     var currentPower: PowerSnapshot { powerSnapshot() }
@@ -116,7 +127,6 @@ final class SessionManager {
     /// Power Mode (auto-brightness moves it slowly) and still count as
     /// untouched by the user when the mode ends. A larger difference is a
     /// brightness key: the panel is the user's again and is left alone.
-    static let untouchedDisplayTolerance: Float = 0.05
 
     /// System integrations (lid, battery, network, ...). Set by `live()`;
     /// nil in tests. Started after a session starts, stopped when it ends.
@@ -337,20 +347,36 @@ final class SessionManager {
             fail(message)
             return
         }
+        guard noSavedSession(context: "start") else { return }
+        if !state.sleepDisabledByUs {
+            do {
+                if try await sleepGuard.isSleepDisabled() {
+                    fail("start refused: sleep is already disabled without an ownership journal; preserve the existing setting and resolve it before retrying")
+                    return
+                }
+            } catch {
+                fail("start refused: could not observe the existing sleep setting: \(error.localizedDescription)")
+                return
+            }
+            guard endTicket == ticket, !quitRequested else { return }
+            guard noSavedSession(context: "start") else { return }
+        }
         let now = clock()
         let new = SessionMath.newSession(now: now, duration: duration, maxDuration: config.maxDuration)
         // What was on disk before this attempt, read under the lock. A
         // rollback puts exactly this back: an entry an earlier failed restore
         // left behind is evidence, not something this start may clear.
         let journalBefore = state
-        let sessionBefore = (try? store.loadSession()) ?? nil
+        inFlightStart = new
+        defer { inFlightStart = nil }
 
         do {
             try store.saveSession(new)
             try journal { $0.sleepDisabledByUs = true }
         } catch {
-            fail("could not write session: \(error.localizedDescription)")
-            rollBackStart(journal: journalBefore, session: sessionBefore)
+            let primary = "could not write session: \(error.localizedDescription)"
+            let cleanup = rollBackStart(journal: journalBefore, expected: new)
+            fail(([primary] + cleanup).joined(separator: "; "))
             return
         }
 
@@ -359,29 +385,56 @@ final class SessionManager {
         do {
             try await backstop.arm()
         } catch {
-            rollBackStart(journal: journalBefore, session: sessionBefore)
-            fail("could not arm backstop: \(error.localizedDescription)")
+            let primary = "could not arm backstop: \(error.localizedDescription)"
+            switch admitSuspendedSession(new, ticket: ticket, context: "start") {
+            case .cancelled:
+                pendingTransitionFailure = primary
+                fail(primary)
+            case .changed:
+                fail("\(primary); \(lastError ?? "saved session changed"); recovery journal retained")
+            case .valid, .expired:
+                let cleanup = rollBackStart(journal: journalBefore, expected: new)
+                fail(([primary] + cleanup).joined(separator: "; "))
+            }
             return
         }
-        guard endTicket == ticket else {
-            rollBackStart(journal: journalBefore, session: sessionBefore)
-            Log.info("start abandoned before disabling sleep: end requested meanwhile")
+        switch admitSuspendedSession(new, ticket: ticket, context: "start") {
+        case .cancelled, .changed: return
+        case .expired:
+            let cleanup = rollBackStart(journal: journalBefore, expected: new)
+            fail((["start expired while the recovery agent was arming; no sleep hold was applied"] + cleanup).joined(separator: "; "))
             return
+        case .valid: break
         }
 
         do {
             try await sleepGuard.setSleepDisabled(true)
         } catch {
-            fail("could not disable sleep: \(error.localizedDescription)")
-            _ = await performEnd(reason: .startFailed)
-            return
+            let primary = "could not disable sleep: \(error.localizedDescription)"
+            switch admitSuspendedSession(new, ticket: ticket, context: "start") {
+            case .cancelled:
+                pendingTransitionFailure = primary
+                fail(primary)
+                return
+            case .changed:
+                fail("\(primary); \(lastError ?? "saved session changed"); recovery journal retained")
+                return
+            case .valid, .expired:
+                await undoStartAttempt(new, previous: journalBefore, ticket: ticket, primary: primary)
+                return
+            }
         }
-        guard endTicket == ticket else {
-            // Sleep is disabled and journaled as ours. The end that was
-            // requested runs next and restores from that journal; the session
-            // is never surfaced.
-            Log.info("start abandoned after disabling sleep: end requested meanwhile; journal left for it")
+        switch admitSuspendedSession(new, ticket: ticket, context: "start") {
+        case .cancelled:
+            return // the queued end owns the journal
+        case .changed:
+            fail("\(lastError ?? "saved session changed"); sleep hold and recovery journal retained")
             return
+        case .expired:
+            await undoStartAttempt(new, previous: journalBefore, ticket: ticket,
+                                   primary: "start expired while the sleep hold was in flight")
+            return
+        case .valid: break
         }
 
         session = new
@@ -394,6 +447,118 @@ final class SessionManager {
         // PR3: schedule "5 minutes left" notification.
     }
 
+    private enum SessionAdmission { case valid, cancelled, changed, expired }
+
+    /// Shared admission after suspension. A changed record is never deleted
+    /// or overwritten; the journal remains available for later recovery.
+    private func admitSuspendedSession(_ expected: Session, ticket: Int, context: String) -> SessionAdmission {
+        guard ticket == endTicket else { return .cancelled }
+        guard savedSessionMatches(expected, context: context) else { return .changed }
+        return expected.isExpired(at: clock()) ? .expired : .valid
+    }
+
+    /// Undo only this start's sleep hold. Pre-existing journal entries are
+    /// restored intact rather than treating them as this attempt's effects.
+    private func undoStartAttempt(_ expected: Session, previous: RuntimeState,
+                                  ticket: Int, primary: String) async {
+        func stillOwned() -> Bool {
+            switch admitSuspendedSession(expected, ticket: ticket, context: "start cleanup") {
+            case .valid, .expired: return true
+            case .cancelled, .changed: return false
+            }
+        }
+        func abandonCleanup() {
+            let detail = ticket == endTicket ? (lastError ?? "saved session changed") : "an end request is pending"
+            if ticket != endTicket { pendingTransitionFailure = primary }
+            fail("\(primary); \(detail); inspect the recovery journal")
+        }
+        guard stillOwned() else { abandonCleanup(); return }
+        var cleanupPhase = "release"
+        do {
+            if !previous.sleepDisabledByUs {
+                let disabled = try await sleepGuard.isSleepDisabled()
+                guard stillOwned() else { abandonCleanup(); return }
+                if disabled {
+                    try await sleepGuard.setSleepDisabled(false)
+                    guard stillOwned() else { abandonCleanup(); return }
+                }
+            }
+            cleanupPhase = "journal"
+            try persistState(previous)
+            guard stillOwned() else { abandonCleanup(); return }
+            cleanupPhase = "session"
+            try store.deleteSession()
+            fail(primary)
+            notifier.post(title: Self.endTitle(.startFailed, had: false), body: endBody(.startFailed))
+        } catch {
+            var detail = "\(primary); start cleanup failed: \(error.localizedDescription); recovery journal retained"
+            // Remove only this attempt's still-matching session, so a
+            // relaunch cannot treat its failed start as a live session.
+            if cleanupPhase == "release", stillOwned() {
+                do { try store.deleteSession() }
+                catch {
+                    detail += "; session removal failed: \(error.localizedDescription)"
+                    pendingEnd = .startFailed
+                    quitRequested = false
+                }
+            } else {
+                // Do not retry a failed journal write or session deletion.
+                detail += "; saved session was left untouched"
+                pendingEnd = .startFailed
+                quitRequested = false
+            }
+            fail(detail)
+            if ticket == endTicket {
+                do { try await backstop.arm() }
+                catch {
+                    fail("\(lastError ?? primary); recovery agent could not be confirmed: \(error.localizedDescription)")
+                    pendingEnd = .startFailed
+                    quitRequested = false
+                }
+            } else {
+                pendingTransitionFailure = detail
+            }
+            notifier.post(title: Self.incompleteTitle, body: lastError ?? primary)
+        }
+    }
+
+    private func noSavedSession(context: String) -> Bool {
+        do {
+            guard try store.loadSession() == nil else {
+                fail("\(context) refused: an existing session must be reconciled first")
+                return false
+            }
+            return true
+        } catch {
+            fail("\(context) refused: existing session could not be read: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    /// Match the saved generation at the precision of the on-disk format.
+    private func savedSessionMatches(_ current: Session, context: String) -> Bool {
+        do {
+            // ISO-8601 storage uses whole seconds, so normalize first.
+            let encoded = try Store.makeEncoder().encode(current)
+            let persistedCurrent = try Store.makeDecoder().decode(Session.self, from: encoded)
+            guard try store.loadSession() == persistedCurrent else {
+                fail("\(context) refused: the saved session is missing or changed")
+                return false
+            }
+            return true
+        } catch {
+            fail("\(context) refused: session.json could not be read: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    /// Revalidate the in-memory generation against the locked disk record.
+    private func admitDurationChange(_ current: Session, ticket: Int) -> Bool {
+        guard pendingEnd == nil, !quitRequested, endTicket == ticket,
+              session == current, !current.isExpired(at: clock()) else { return false }
+        return savedSessionMatches(current, context: "duration change")
+    }
+
     func extend(by extra: TimeInterval) async {
         guard session != nil else { return }
         let ticket = endTicket
@@ -401,8 +566,7 @@ final class SessionManager {
     }
 
     private func performExtend(by extra: TimeInterval, ticket: Int) async {
-        guard let current = session, endTicket == ticket else { return }
-        let updated = SessionMath.extended(current, by: extra, now: clock(), maxDuration: config.maxDuration)
+        guard let current = session, admitDurationChange(current, ticket: ticket) else { return }
         // The agent enforces whatever deadline is on disk; confirm it is
         // still loaded before moving that deadline out.
         do {
@@ -411,10 +575,8 @@ final class SessionManager {
             fail("could not confirm backstop: \(error.localizedDescription)")
             return
         }
-        guard endTicket == ticket, session == current else {
-            Log.info("extend abandoned: end requested meanwhile")
-            return
-        }
+        guard admitDurationChange(current, ticket: ticket) else { return }
+        let updated = SessionMath.extended(current, by: extra, now: clock(), maxDuration: config.maxDuration)
         do {
             try store.saveSession(updated)
         } catch {
@@ -433,10 +595,11 @@ final class SessionManager {
     func resetDuration(_ duration: TimeInterval) async -> Bool {
         let ticket = endTicket
         let result = await exclusive("reset duration") { () -> Bool in
-            guard let current = self.session, self.endTicket == ticket, duration.isFinite else { return false }
+            guard let current = self.session, duration.isFinite,
+                  self.admitDurationChange(current, ticket: ticket) else { return false }
             do { try await self.backstop.arm() }
             catch { self.fail("could not confirm recovery: \(error.localizedDescription)"); return false }
-            guard self.endTicket == ticket, self.session == current else { return false }
+            guard self.admitDurationChange(current, ticket: ticket) else { return false }
             var updated = current
             updated.endsAt = self.clock().addingTimeInterval(SessionMath.clamp(duration, maxDuration: self.config.maxDuration))
             updated.extensions = []
@@ -462,12 +625,13 @@ final class SessionManager {
     /// be read the end changes nothing and waits for a person.
     @discardableResult
     func end(reason: EndReason) async -> EndOutcome {
+        let expected = session ?? inFlightStart ?? pendingSession
         endTicket += 1
         if reason == .quit { quitRequested = true }
         retryTimer?.invalidate()
         retryTimer = nil
         let outcome: EndOutcome
-        switch await exclusive("end", { await self.performEnd(reason: reason) }) {
+        switch await exclusive("end", { await self.performEnd(reason: reason, expected: expected, requireMissing: expected == nil) }) {
         case let .success(o): outcome = o
         case .failure(.lockBusy): outcome = .locked
         case .failure(.journalUnreadable): outcome = .journalUnreadable
@@ -475,6 +639,7 @@ final class SessionManager {
         switch outcome {
         case .restored, .incomplete(agentArmed: true):
             pendingEnd = nil
+            pendingSession = nil
         case .locked:
             notifier.post(
                 title: Self.notEndedTitle,
@@ -483,7 +648,7 @@ final class SessionManager {
             scheduleEndRetry(reason)
         case .incomplete(agentArmed: false), .sessionRetained:
             scheduleEndRetry(reason)
-        case .journalUnreadable:
+        case .journalUnreadable, .sessionUnreadable, .sessionChanged:
             // No timer: a broken file does not heal by itself. The end stays
             // pending, so new starts are refused and quit is deferred, until
             // the next end request finds a readable journal.
@@ -494,7 +659,41 @@ final class SessionManager {
         return outcome
     }
 
-    private func performEnd(reason: EndReason) async -> EndOutcome {
+    private func performEnd(reason: EndReason, expected: Session? = nil,
+                            requireMissing: Bool = false) async -> EndOutcome {
+        do {
+            let saved = try store.loadSession()
+            if let expected {
+                let encoded = try Store.makeEncoder().encode(expected)
+                let canonical = try Store.makeDecoder().decode(Session.self, from: encoded)
+                guard saved == nil || saved == canonical else {
+                    pendingSession = expected
+                    let refusal = "end refused: the saved session changed; no recovery effect was attempted"
+                    fail(pendingTransitionFailure.map { "\($0); \(refusal)" } ?? refusal)
+                    notifier.post(title: Self.incompleteTitle, body: lastError ?? "Session changed.")
+                    return .sessionChanged
+                }
+            } else if requireMissing, saved != nil {
+                fail("end refused: an unowned saved session exists; no recovery effect was attempted")
+                notifier.post(title: Self.incompleteTitle, body: lastError ?? "Session ownership is unknown.")
+                return .sessionChanged
+            }
+        } catch {
+            pendingSession = expected
+            let refusal = "end refused: session.json could not be read and was left in place: \(error.localizedDescription)"
+            fail(pendingTransitionFailure.map { "\($0); \(refusal)" } ?? refusal)
+            notifier.post(title: Self.incompleteTitle, body: lastError ?? "Session is unreadable.")
+            return .sessionUnreadable
+        }
+        let trigger = pendingTransitionFailure ?? ((reason == .startFailed || reason == .recoveryUnavailable) ? lastError : nil)
+        recoveryFailures = [trigger].compactMap { $0 }
+        defer {
+            pendingTransitionFailure = nil
+            if let failures = recoveryFailures, !failures.isEmpty {
+                lastError = failures.joined(separator: "; ")
+            }
+            recoveryFailures = nil
+        }
         lastEndReason = reason
         let had = session != nil
         Log.info("session end (\(reason.rawValue))")
@@ -510,7 +709,14 @@ final class SessionManager {
             deletionError = error.localizedDescription
             fail("could not remove session.json: \(error.localizedDescription)")
         }
-        await restoreAll()
+        let expectation: RecoverySessionExpectation = (deletionError != nil && expected != nil)
+            ? .matching(expected!) : .absent
+        guard await restoreAll(expectation: expectation) else {
+            services?.stop()
+            pendingSession = deletionError == nil ? nil : expected
+            notifier.post(title: Self.incompleteTitle, body: lastError ?? "Saved session changed during recovery.")
+            return .sessionChanged
+        }
         // App Nap defaults are intentionally left set (spec: open decisions).
         services?.stop()
 
@@ -526,6 +732,7 @@ final class SessionManager {
                 }
             }
             if let deletionError {
+                pendingSession = expected
                 // The agent enforces deadlines, it does not remove a live
                 // session file; only this process can, so it stays to retry.
                 let journalNote = state.isDirty ? " Some changes are also still journaled." : ""
@@ -536,7 +743,7 @@ final class SessionManager {
                 scheduleEndRetry(reason)
                 return .sessionRetained
             }
-            let detail = lastError ?? "some changes could not be undone"
+            let detail = recoveryFailures.flatMap { $0.isEmpty ? nil : $0.joined(separator: "; ") } ?? "some changes could not be undone"
             let retry = armed ? "The recovery agent retries every minute." : "WideAwake retries in \(Int(recoveryRetryDelay)) s; do not quit until it is restored."
             notifier.post(title: Self.incompleteTitle, body: "\(detail). \(retry)")
             // Reconcile and a failed start reach here without `end()`; the
@@ -545,6 +752,7 @@ final class SessionManager {
             if !armed { scheduleEndRetry(reason) }
             return .incomplete(agentArmed: armed)
         }
+        if recoveryFailures?.isEmpty == true { lastError = nil }
         notifier.post(title: Self.endTitle(reason, had: had), body: endBody(reason))
         return .restored
     }
@@ -594,7 +802,59 @@ final class SessionManager {
         return false
     }
 
+    private enum RecoverySessionExpectation { case absent, matching(Session) }
+    private enum LowPowerRelease { case changed, alreadyOff, failed, sessionChanged }
+
+    private func recoverySessionMatches(_ expectation: RecoverySessionExpectation) -> Bool {
+        switch expectation {
+        case .absent: return noSavedSession(context: "recovery")
+        case let .matching(session): return savedSessionMatches(session, context: "recovery")
+        }
+    }
+
+    /// Observe the owned effect before undo, then clear its journal only on success.
+    private func releaseOwnedLowPower(ticket: Int?, expectation: RecoverySessionExpectation? = nil,
+                                      activeSession: Session? = nil) async -> LowPowerRelease {
+        guard state.lowPowerSetByUs else { return .alreadyOff }
+        do {
+            let wasOn = try await sleepGuard.isLowPowerModeOn()
+            if let ticket {
+                guard ticket == endTicket, pendingEnd == nil, !quitRequested else { return .failed }
+                if let activeSession {
+                    guard admitDurationChange(activeSession, ticket: ticket) else { return .failed }
+                } else if !noSavedSession(context: "low power release") { return .failed }
+            }
+            if let expectation, !recoverySessionMatches(expectation) { return .sessionChanged }
+            dropDisplayWriteIfMoved()
+            if wasOn {
+                try await sleepGuard.setLowPowerMode(false)
+                if let ticket {
+                    guard ticket == endTicket, pendingEnd == nil, !quitRequested else { return .failed }
+                    if let activeSession {
+                        guard admitDurationChange(activeSession, ticket: ticket) else { return .failed }
+                    } else if !noSavedSession(context: "low power release") { return .failed }
+                }
+                if let expectation, !recoverySessionMatches(expectation) { return .sessionChanged }
+            } else { dropDisplayWrite(reason: "the mode is already off") }
+            do { try journal { $0.lowPowerSetByUs = false } }
+            catch {
+                fail("low power mode was released but journal clearing failed: \(error.localizedDescription); retry required")
+                return .failed
+            }
+            Log.info("low power mode off")
+            return wasOn ? .changed : .alreadyOff
+        } catch {
+            fail("could not observe or disable low power mode: \(error.localizedDescription); kept in the journal to retry")
+            return .failed
+        }
+    }
+
     private func performSetLowPower(_ on: Bool, ticket: Int) async -> Bool {
+        guard pendingEnd == nil, !quitRequested, endTicket == ticket else { return false }
+        let activeSession = session
+        if let activeSession {
+            guard admitDurationChange(activeSession, ticket: ticket) else { return false }
+        } else if !noSavedSession(context: "low power change") { return false }
         if on {
             guard !state.lowPowerSetByUs, endTicket == ticket else { return false }
             do {
@@ -606,7 +866,10 @@ final class SessionManager {
                 Log.error("could not read low power mode; not enabling it: \(error.localizedDescription)")
                 return false
             }
-            guard endTicket == ticket else { return false }
+            guard endTicket == ticket, pendingEnd == nil, !quitRequested else { return false }
+            if let activeSession {
+                guard admitDurationChange(activeSession, ticket: ticket) else { return false }
+            } else if !noSavedSession(context: "low power change") { return false }
             willEnableLowPower?()
             if state.displayRestoredUnderLowPower != nil {
                 Log.info("display restore after low power mode dropped: a new low power mode interval starts")
@@ -625,37 +888,54 @@ final class SessionManager {
             do {
                 try await sleepGuard.setLowPowerMode(true)
             } catch {
-                fail("could not enable low power mode: \(error.localizedDescription)")
-                do {
-                    try await sleepGuard.setLowPowerMode(false)
-                    try? journal { $0.lowPowerSetByUs = false }
-                } catch {
-                    fail("low power mode may be on and could not be switched off: \(error.localizedDescription); kept in the journal to retry")
-                    do { try await backstop.arm() } catch { Log.error("recovery agent could not be confirmed: \(error.localizedDescription)") }
+                let primary = "could not enable low power mode: \(error.localizedDescription)"
+                if let activeSession {
+                    switch admitSuspendedSession(activeSession, ticket: ticket, context: "low power change") {
+                    case .cancelled:
+                        pendingTransitionFailure = primary
+                        fail(primary)
+                        return false
+                    case .changed:
+                        fail("\(primary); \(lastError ?? "saved session changed"); recovery journal retained")
+                        session = nil
+                        return false
+                    case .expired:
+                        pendingTransitionFailure = primary
+                        _ = await performEnd(reason: .timer, expected: activeSession)
+                        return false
+                    case .valid: break
+                    }
+                }
+                fail(primary)
+                if await releaseOwnedLowPower(ticket: ticket, activeSession: activeSession) == .failed {
+                    let cleanup = lastError ?? "low power cleanup failed"
+                    fail("\(primary); \(cleanup)")
+                    if ticket == endTicket {
+                        do { try await backstop.arm() }
+                        catch { fail("\(lastError ?? primary); recovery agent could not be confirmed: \(error.localizedDescription)") }
+                    }
                 }
                 return false
             }
-            guard endTicket == ticket else {
-                // The mode is on and journaled as ours; the end queued behind
-                // this call clears it. Nothing to announce.
-                Log.info("low power mode on, but an end was requested meanwhile; journal left for it")
-                return false
+            if let activeSession {
+                switch admitSuspendedSession(activeSession, ticket: ticket, context: "low power change") {
+                case .cancelled: return false
+                case .changed: session = nil; return false
+                case .expired:
+                    _ = await performEnd(reason: .timer, expected: activeSession)
+                    return false
+                case .valid: break
+                }
+            } else {
+                guard endTicket == ticket, noSavedSession(context: "low power change") else { return false }
             }
             Log.info("low power mode on")
             return true
         } else {
-            guard state.lowPowerSetByUs else { return false }
-            dropDisplayWriteIfMoved()
-            do {
-                try await sleepGuard.setLowPowerMode(false)
-                try? journal { $0.lowPowerSetByUs = false }
-                Log.info("low power mode off")
-                settleDisplayAfterLowPower()
-                return true
-            } catch {
-                Log.error("could not disable low power mode: \(error.localizedDescription)")
-                return false
-            }
+            guard state.lowPowerSetByUs, endTicket == ticket else { return false }
+            let result = await releaseOwnedLowPower(ticket: ticket, activeSession: activeSession)
+            if result == .changed { settleDisplayAfterLowPower(); return true }
+            return false
         }
     }
 
@@ -673,37 +953,39 @@ final class SessionManager {
     /// while pmset is running (a lid-close freeze, say) is never overwritten.
     /// Failures are logged and the entry is left set so the next end,
     /// reconcile or the backstop retries it.
-    func restoreAll() async {
+    private func restoreAll(expectation: RecoverySessionExpectation) async -> Bool {
+        guard recoverySessionMatches(expectation) else { return false }
         if state.sleepDisabledByUs {
             do {
-                try await sleepGuard.setSleepDisabled(false)
-                try? journal { $0.sleepDisabledByUs = false }
+                let disabled = try await sleepGuard.isSleepDisabled()
+                guard recoverySessionMatches(expectation) else { return false }
+                if disabled {
+                    try await sleepGuard.setSleepDisabled(false)
+                    guard recoverySessionMatches(expectation) else { return false }
+                }
+                do { try journal { $0.sleepDisabledByUs = false } }
+                catch { fail("sleep restored but journal clearing failed: \(error.localizedDescription); retry required") }
                 Log.info("sleep restored")
             } catch {
                 fail("could not restore sleep: \(error.localizedDescription)")
+                guard recoverySessionMatches(expectation) else { return false }
             }
         }
 
         var lowPowerJustCleared = false
         if state.lowPowerSetByUs {
-            dropDisplayWriteIfMoved()
-            do {
-                try await sleepGuard.setLowPowerMode(false)
-                try? journal { $0.lowPowerSetByUs = false }
-                Log.info("low power mode cleared")
-                lowPowerJustCleared = true
-            } catch {
-                fail("could not clear low power mode: \(error.localizedDescription)")
-            }
+            let result = await releaseOwnedLowPower(ticket: nil, expectation: expectation)
+            if result == .sessionChanged { return false }
+            lowPowerJustCleared = result == .changed
+            guard recoverySessionMatches(expectation) else { return false }
         } else if state.displayRestoredUnderLowPower != nil {
             dropDisplayWrite(reason: "the mode was cleared by someone else")
         }
 
+        guard recoverySessionMatches(expectation) else { return false }
         undoLidActionsInJournal()
-        // After the undo: a restore just written with the mode off owes
-        // nothing more (its journal write clears the entry), and a lid
-        // still open gets its second write now.
         if lowPowerJustCleared { settleDisplayAfterLowPower() }
+        return true
     }
 
     /// Shared body of lid open, reconcile (lid open) and `restoreAll()`;
@@ -714,10 +996,13 @@ final class SessionManager {
             // Only entries that still need a retry, or that a person has to
             // look at, stay journaled. Gone and resumed entries are done.
             let keep = Set(report.failed + report.unverifiable + report.unobserved)
-            try? journal { s in
-                s.frozenProcesses.removeAll { !keep.contains($0.pid) }
-                // Docker Desktop is frozen via its pids too; the flag is only a marker.
-                if s.frozenProcesses.isEmpty { s.dockerFrozen = false }
+            do {
+                try journal { s in
+                    s.frozenProcesses.removeAll { !keep.contains($0.pid) }
+                    if s.frozenProcesses.isEmpty { s.dockerFrozen = false }
+                }
+            } catch {
+                fail("process recovery completed but journal clearing failed: \(error.localizedDescription); retry required")
             }
             Log.info("resumed \(report.resumed.count) frozen pid(s); \(report.gone.count) gone, \(report.failed.count) failed, \(report.unverifiable.count) unverifiable, \(report.unobserved.count) unobserved")
             if !report.failed.isEmpty {
@@ -731,19 +1016,25 @@ final class SessionManager {
                 fail("pid(s) \(list) are stopped but journaled without identity (a legacy entry from an older build, or a freeze interrupted before the kernel confirmed the stop), so WideAwake cannot prove it froze them and will not resume them. Check each one first, for example `ps -o pid,stat,lstart,command -p <pid>`, and only if it is a process you expected WideAwake to freeze run `kill -CONT <pid>`; the entry stays in the journal until resumed or gone")
             }
         } else if state.dockerFrozen {
-            try? journal { $0.dockerFrozen = false }
+            do { try journal { $0.dockerFrozen = false } }
+            catch { fail("docker marker could not be cleared: \(error.localizedDescription); retry required") }
         }
 
         if state.savedOutputVolume != nil || state.savedMuted != nil {
             do {
                 let current = try audio.read()
-                let volume = state.savedOutputVolume ?? current.volume
-                let muted = state.savedMuted ?? current.muted
-                try audio.apply(volume: volume, muted: muted)
-                Log.info("audio restored (volume \(volume), muted \(muted))")
-                try? journal { s in
-                    s.savedOutputVolume = nil
-                    s.savedMuted = nil
+                // Muting did not change volume. Keep the currently observed
+                // volume and do not reverse an observed user unmute.
+                if current.muted, state.savedMuted == false {
+                    try audio.setMuted(false)
+                }
+                do {
+                    try journal { s in
+                        s.savedOutputVolume = nil
+                        s.savedMuted = nil
+                    }
+                } catch {
+                    fail("audio recovery was applied or superseded but the journal entry could not be cleared: \(error.localizedDescription); it will be retried")
                 }
             } catch {
                 fail("could not restore audio: \(error.localizedDescription)")
@@ -762,16 +1053,21 @@ final class SessionManager {
         var restoredKeyboard: Float?
         if let saved = state.savedDisplayBrightness {
             do {
-                try display.setBrightness(saved)
-                Log.info("display restored (brightness \(saved))")
-                restoredDisplay = saved
+                let current = try display.readBrightness()
+                if current == 0 {
+                    try display.setBrightness(saved)
+                    restoredDisplay = saved
+                    Log.info("display restored (brightness \(saved))")
+                } else {
+                    Log.info("display brightness changed since darkening; retaining observed value")
+                }
                 // Written under our Low Power Mode: written again once the
                 // mode is off, since the mode's end rescales the panel.
                 let underLowPower = state.lowPowerSetByUs
                 do {
                     try journal { s in
                         s.savedDisplayBrightness = nil
-                        s.displayRestoredUnderLowPower = underLowPower ? saved : nil
+                        s.displayRestoredUnderLowPower = underLowPower && restoredDisplay != nil ? saved : nil
                     }
                 } catch {
                     fail("display brightness restored but the journal entry could not be cleared: \(error.localizedDescription); it will be retried")
@@ -782,9 +1078,16 @@ final class SessionManager {
         }
         if let saved = state.savedKeyboardBrightness {
             do {
-                try keyboard.setBrightness(saved)
-                Log.info("keyboard backlight restored (brightness \(saved))")
-                restoredKeyboard = saved
+                guard let current = try keyboard.readBrightness() else {
+                    throw DisplayPowerError(what: "read keyboard backlight")
+                }
+                if current == 0 {
+                    try keyboard.setBrightness(saved)
+                    restoredKeyboard = saved
+                    Log.info("keyboard backlight restored (brightness \(saved))")
+                } else {
+                    Log.info("keyboard brightness changed since darkening; retaining observed value")
+                }
                 do {
                     try journal { $0.savedKeyboardBrightness = nil }
                 } catch {
@@ -818,6 +1121,10 @@ final class SessionManager {
             return
         }
         do {
+            guard try display.readBrightness() == value else {
+                dropDisplayWrite(reason: "observed brightness changed")
+                return
+            }
             try display.setBrightness(value)
             Log.info("display restored again after low power mode (brightness \(value))")
             try? journal { $0.displayRestoredUnderLowPower = nil }
@@ -835,7 +1142,7 @@ final class SessionManager {
     private func dropDisplayWriteIfMoved() {
         guard let value = state.displayRestoredUnderLowPower, state.savedDisplayBrightness == nil else { return }
         guard let now = try? display.readBrightness() else { return }
-        if abs(now - value) > Self.untouchedDisplayTolerance {
+        if now != value {
             dropDisplayWrite(reason: "the display moved since the restore (\(now), restored \(value))")
         }
     }
@@ -880,8 +1187,12 @@ final class SessionManager {
                         Log.info("display restore re-assert skipped: darkened again")
                     } else {
                         do {
-                            try self.display.setBrightness(value)
-                            Log.info("display restore re-asserted (brightness \(value))")
+                            if try self.display.readBrightness() == value {
+                                try self.display.setBrightness(value)
+                                Log.info("display restore re-asserted (brightness \(value))")
+                            } else {
+                                Log.info("display re-assert skipped: observed brightness changed")
+                            }
                         } catch {
                             Log.info("display restore re-assert failed: \(error.localizedDescription)")
                         }
@@ -892,8 +1203,12 @@ final class SessionManager {
                         Log.info("keyboard restore re-assert skipped: darkened again")
                     } else {
                         do {
-                            try self.keyboard.setBrightness(value)
-                            Log.info("keyboard restore re-asserted (brightness \(value))")
+                            if try self.keyboard.readBrightness() == value {
+                                try self.keyboard.setBrightness(value)
+                                Log.info("keyboard restore re-asserted (brightness \(value))")
+                            } else {
+                                Log.info("keyboard re-assert skipped: observed brightness changed")
+                            }
                         } catch {
                             Log.info("keyboard restore re-assert failed: \(error.localizedDescription)")
                         }
@@ -906,20 +1221,43 @@ final class SessionManager {
     // MARK: Reconcile (spec section 8)
 
     func reconcile() async {
-        _ = await exclusive("reconcile") { await self.performReconcile() }
+        let ticket = endTicket
+        _ = await exclusive("reconcile") { await self.performReconcile(ticket: ticket) }
     }
 
-    private func performReconcile() async {
+    private func performReconcile(ticket: Int) async {
+        guard ticket == endTicket else { return }
         let now = clock()
         var onDisk: Session?
         do {
             onDisk = try store.loadSession()
         } catch {
-            Log.error("session.json unreadable (\(error.localizedDescription)); treating as expired")
-            onDisk = nil
+            fail("reconcile refused: session.json could not be read and was left in place: \(error.localizedDescription)")
+            notifier.post(title: Self.incompleteTitle, body: lastError ?? "Session is unreadable.")
+            return
         }
 
         if let s = onDisk, !s.isExpired(at: now) {
+            // A recorded owner and observed value must agree before resumption.
+            let alreadyOwned = state.sleepDisabledByUs
+            do {
+                let disabled = try await sleepGuard.isSleepDisabled()
+                guard ticket == endTicket else { return }
+                if disabled != alreadyOwned {
+                    fail("session recovery refused: observed sleep setting and ownership journal disagree; no setting was changed")
+                    notifier.post(title: Self.incompleteTitle, body: lastError ?? "Sleep ownership is unknown.")
+                    return
+                }
+            } catch {
+                fail("session recovery refused: could not observe the existing sleep setting: \(error.localizedDescription)")
+                notifier.post(title: Self.incompleteTitle, body: lastError ?? "Sleep ownership is unknown.")
+                return
+            }
+            guard savedSessionMatches(s, context: "session recovery") else { return }
+            if s.isExpired(at: clock()) {
+                _ = await performEnd(reason: .timer, expected: s)
+                return
+            }
             // Step 2: valid session. Arm first, then journal, then hold
             // sleep. Any failure ends the session rather than holding sleep
             // with nothing guaranteed to release it.
@@ -927,27 +1265,61 @@ final class SessionManager {
             do {
                 try await backstop.arm()
             } catch {
-                fail("could not arm recovery agent for the session on disk: \(error.localizedDescription); ending it")
-                _ = await performEnd(reason: .recoveryUnavailable)
+                let primary = "could not arm recovery agent: \(error.localizedDescription)"
+                switch admitSuspendedSession(s, ticket: ticket, context: "session recovery") {
+                case .cancelled:
+                    pendingTransitionFailure = primary
+                    fail(primary)
+                case .changed:
+                    fail("\(primary); \(lastError ?? "saved session changed")")
+                    session = nil
+                case .valid, .expired:
+                    fail("\(primary); ending the session")
+                    _ = await performEnd(reason: .recoveryUnavailable, expected: s)
+                }
                 return
+            }
+            switch admitSuspendedSession(s, ticket: ticket, context: "session recovery") {
+            case .cancelled: return
+            case .changed: session = nil; return
+            case .expired: _ = await performEnd(reason: .timer, expected: s); return
+            case .valid: break
             }
             if !state.sleepDisabledByUs {
                 do {
                     try journal { $0.sleepDisabledByUs = true }
                 } catch {
                     fail("could not journal sleep guard: \(error.localizedDescription); ending session")
-                    _ = await performEnd(reason: .recoveryUnavailable)
+                    _ = await performEnd(reason: .recoveryUnavailable, expected: s)
                     return
                 }
             }
-            do {
-                try await sleepGuard.setSleepDisabled(true)
-                lastError = nil
-            } catch {
-                fail("could not re-apply sleep guard: \(error.localizedDescription); ending session")
-                _ = await performEnd(reason: .recoveryUnavailable)
-                return
+            if !alreadyOwned {
+                do {
+                    try await sleepGuard.setSleepDisabled(true)
+                    switch admitSuspendedSession(s, ticket: ticket, context: "session recovery") {
+                    case .cancelled: return
+                    case .changed: session = nil; return
+                    case .expired: _ = await performEnd(reason: .timer, expected: s); return
+                    case .valid: break
+                    }
+                } catch {
+                    let primary = "could not re-apply sleep guard: \(error.localizedDescription)"
+                    switch admitSuspendedSession(s, ticket: ticket, context: "session recovery") {
+                    case .cancelled:
+                        pendingTransitionFailure = primary
+                        fail(primary)
+                    case .changed:
+                        fail("\(primary); \(lastError ?? "saved session changed")")
+                        session = nil
+                    case .valid, .expired:
+                        fail("\(primary); ending session")
+                        _ = await performEnd(reason: .recoveryUnavailable, expected: s)
+                    }
+                    return
+                }
             }
+            lastError = nil
             Log.info("reconcile: session valid until \(iso(s.endsAt))")
             if !state.lowPowerSetByUs, state.displayRestoredUnderLowPower != nil {
                 dropDisplayWrite(reason: "the mode is not ours")
@@ -967,30 +1339,33 @@ final class SessionManager {
         }
 
         // Step 1: missing or expired -> full end.
-        if onDisk != nil {
+        if let onDisk {
             Log.info("reconcile: session expired, restoring")
-            _ = await performEnd(reason: .timer)
+            _ = await performEnd(reason: .timer, expected: onDisk)
         } else if state.isDirty {
             Log.info("reconcile: no session but dirty state, restoring")
-            _ = await performEnd(reason: .backstop)
+            _ = await performEnd(reason: .backstop, requireMissing: true)
         } else if state.displayRestoredUnderLowPower != nil {
             dropDisplayWrite(reason: "no session and the mode is not ours")
         } else {
             Log.info("reconcile: no session, nothing to restore")
         }
 
-        // Step 3: SleepDisabled set with no session -> clear it.
+        // A failed owned sleep observation is already reported by recovery;
+        // do not replace that attempt's combined diagnosis with a retry.
+        guard !state.sleepDisabledByUs else { return }
+        // An observed setting without a journal is not proof that we own it.
         do {
-            if try await sleepGuard.isSleepDisabled() {
-                guard session == nil else {
-                    Log.info("reconcile: a session started meanwhile; leaving SleepDisabled")
-                    return
-                }
-                Log.info("reconcile: pmset reports SleepDisabled with no session, clearing")
-                try await sleepGuard.setSleepDisabled(false)
+            let disabled = try await sleepGuard.isSleepDisabled()
+            guard ticket == endTicket else { return }
+            if disabled, !state.sleepDisabledByUs {
+                let message = "Sleep is disabled without an ownership journal. WideAwake left the existing setting unchanged; inspect it before starting a session."
+                if lastError == nil { fail(message) }
+                notifier.post(title: Self.incompleteTitle, body: message)
             }
         } catch {
-            Log.error("reconcile: sleep check failed: \(error.localizedDescription)")
+            let observation = "could not observe the sleep setting: \(error.localizedDescription)"
+            fail(lastError.map { "\($0); \(observation)" } ?? observation)
         }
     }
 
@@ -1032,21 +1407,33 @@ final class SessionManager {
     /// Undo the writes made at the top of `start` by restoring the journal
     /// and session file exactly as they were read under this transaction's
     /// lock. Nothing has touched the machine at this point.
-    private func rollBackStart(journal before: RuntimeState, session previous: Session?) {
+    private func rollBackStart(journal before: RuntimeState, expected: Session) -> [String] {
+        var failures: [String] = []
         do {
-            try persistState(before)
-        } catch {
-            fail("could not restore the journal after a failed start: \(error.localizedDescription)")
-        }
-        do {
-            if let previous {
-                try store.saveSession(previous)
-            } else {
-                try store.deleteSession()
+            let saved = try store.loadSession()
+            let canonical = try Store.makeDecoder().decode(Session.self, from: Store.makeEncoder().encode(expected))
+            guard saved == nil || saved == canonical else {
+                return ["start rollback refused: saved session changed; journal and session retained"]
+            }
+            do { try persistState(before) }
+            catch {
+                failures.append("could not restore the journal after a failed start: \(error.localizedDescription)")
+                pendingEnd = .startFailed
+                quitRequested = false
+                return failures
+            }
+            if saved != nil {
+                do { try store.deleteSession() }
+                catch {
+                    failures.append("could not remove the failed start's session: \(error.localizedDescription)")
+                    pendingEnd = .startFailed
+                    quitRequested = false
+                }
             }
         } catch {
-            fail("could not restore session.json after a failed start: \(error.localizedDescription)")
+            failures.append("start rollback refused: saved session could not be read: \(error.localizedDescription)")
         }
+        return failures
     }
 
     /// In-process timers only; the launchd agent is armed by callers before
@@ -1103,6 +1490,7 @@ final class SessionManager {
     }
 
     private func fail(_ message: String) {
+        recoveryFailures?.append(message)
         lastError = message
         Log.error(message)
     }

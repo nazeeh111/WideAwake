@@ -1,8 +1,26 @@
 import AppKit
+import Darwin
 import ServiceManagement
 
 @main @MainActor enum WideAwakeApp {
     static func main() {
+        if CommandLine.arguments.dropFirst().first == "--inspect-recovery" {
+            guard CommandLine.arguments.count == 3 else {
+                fputs("Usage: WideAwake --inspect-recovery DIRECTORY\n", stderr)
+                exit(2)
+            }
+            let root = URL(fileURLWithPath: CommandLine.arguments[2], isDirectory: true)
+            let (report, failed) = RecoveryInspection.inspect(root: root)
+            do {
+                let data = try Store.makeEncoder().encode(report)
+                FileHandle.standardOutput.write(data)
+                FileHandle.standardOutput.write(Data("\n".utf8))
+                exit(failed ? 2 : 0)
+            } catch {
+                fputs("Could not encode recovery inspection: \(error.localizedDescription)\n", stderr)
+                exit(2)
+            }
+        }
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
@@ -243,7 +261,7 @@ import ServiceManagement
         case .idle:
             let blocked = power.blockingMessage(config: manager.config)
             message.stringValue = blocked ?? controller.notice ?? "Choose a time, then close the lid to start."
-            if blocked != nil { message.textColor = .systemOrange }
+            if blocked != nil { message.textColor = .labelColor }
         case .arming: message.stringValue = "Preparing sleep protection… Wait before closing."
         case .ready:
             message.stringValue = "Ready. Timer starts on close.\nClose within \(SliderSettings.label(minutes: Int(controller.armingWindow / 60)))."
@@ -254,8 +272,8 @@ import ServiceManagement
         case .stopping: message.stringValue = "Restoring normal sleep…"
         case .blocked:
             message.stringValue = power.blockingMessage(config: manager.config) ?? "Power is ready. Choose a time to try again."
-            message.textColor = power.stopReason(config: manager.config) == nil ? .labelColor : .systemOrange
-        case let .failed(text): message.stringValue = text; message.textColor = .systemRed
+            message.textColor = .labelColor
+        case let .failed(text): message.stringValue = text; message.textColor = .labelColor
         }
         message.toolTip = message.stringValue
     }
@@ -339,12 +357,12 @@ import ServiceManagement
             settingsMessage.textColor = .secondaryLabelColor
             settingsMessage.stringValue = "Off → \(SliderSettings.label(minutes: scale.maximumMinutes))\n\(scale.stepCount) steps of \(SliderSettings.label(minutes: scale.stepMinutes))"
             apply.isEnabled = true
-        } catch { settingsMessage.textColor = .systemRed; settingsMessage.stringValue = error.localizedDescription; apply.isEnabled = false }
+        } catch { settingsMessage.textColor = .labelColor; settingsMessage.stringValue = error.localizedDescription; apply.isEnabled = false }
     }
     @objc private func restoreDefaults() { populate(.defaults, battery: .defaults); validateSettings() }
     @objc private func saveSettings() {
         do { try controller.applySettings(draft(), battery: draftBattery()); closeSettings() }
-        catch { settingsMessage.textColor = .systemRed; settingsMessage.stringValue = "Could not save: \(error.localizedDescription)" }
+        catch { settingsMessage.textColor = .labelColor; settingsMessage.stringValue = "Could not save: \(error.localizedDescription)" }
     }
     @objc private func closeSettings() {
         showingSettings = false

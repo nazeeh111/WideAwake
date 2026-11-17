@@ -1,0 +1,493 @@
+{
+  "date": "2026-11-17",
+  "scope": "Actual shipping AppKit UI via CUA with injected fake services; no live AppDelegate or physical effects",
+  "shipping_parent": "6588f67464fe0d66b2b6bef320d0e927c72f3ecc",
+  "base_candidate_tree": "3e89dac0a743e9a19fa055ce686f0a0671922b89",
+  "shipping_clock_source": "Sources/WideAwake/Core/SessionManager.swift:160",
+  "shipping_clock_default": "clock: @escaping @Sendable () -> Date = { Date() }",
+  "private_clock_before": "clock: { c.now },",
+  "private_clock_after": "clock: { Date() },",
+  "private_clock_before_sha256": "b3912cf4cebe47fe2f1004ea426fcf26c2d9d708afd5fce33f0d8109a85ab003",
+  "private_clock_after_sha256": "bb5880ce1672c087e883a1d5a0fb3e1bee7670a25edbfe183ac1df07f5bd02dc",
+  "private_delta_scope": "Only FixtureSupport.swift clock closure in copied effects-disabled host; no shipping code changed",
+  "shipping_sources": [
+    {
+      "path": "Sources/WideAwake/ManualLidSession.swift",
+      "shipping_sha256": "b82c77f1fe93a455bffe2368efd3b13e16d30cd7f195b3450231bfb1051bcd25",
+      "host_sha256": "b82c77f1fe93a455bffe2368efd3b13e16d30cd7f195b3450231bfb1051bcd25",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/WideAwakeApp.swift",
+      "shipping_sha256": "d0a4957ccc1c3f974dc0e9eb1aa893e7be97e4f88d9f39ce2b66ce236ef57be0",
+      "host_sha256": "d5bcf82645f0dbe6a93378294a5dd9378e9bce67156b2f6ffd2940995eda2c2f",
+      "original_main_annotation_disabled": true
+    },
+    {
+      "path": "Sources/WideAwake/Core/LaunchdBackstop.swift",
+      "shipping_sha256": "7ed3ba62502904f6a1a7789c75f58f1474e525478e4903b8e36350af6c6d0fc8",
+      "host_sha256": "7ed3ba62502904f6a1a7789c75f58f1474e525478e4903b8e36350af6c6d0fc8",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Core/LidActions.swift",
+      "shipping_sha256": "cdef68e2da4087167047463e3bdcdb8c4f39fff2f8ffd0238a087f58cb0de31e",
+      "host_sha256": "cdef68e2da4087167047463e3bdcdb8c4f39fff2f8ffd0238a087f58cb0de31e",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Core/Log.swift",
+      "shipping_sha256": "de4deebef942593f77ad53569a39c20ae86f2e4879e5c19b3affe759de2a68f7",
+      "host_sha256": "de4deebef942593f77ad53569a39c20ae86f2e4879e5c19b3affe759de2a68f7",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Core/FloorRules.swift",
+      "shipping_sha256": "6f7da760debbf86296dd6e469a538cb98e2058154a3e36035865f74a531b1c50",
+      "host_sha256": "6f7da760debbf86296dd6e469a538cb98e2058154a3e36035865f74a531b1c50",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Core/SleepGuard.swift",
+      "shipping_sha256": "d7e8b49dddd205de0133b9f7030bfbb009cb174fe87ea364c49cd3f8dff364f8",
+      "host_sha256": "d7e8b49dddd205de0133b9f7030bfbb009cb174fe87ea364c49cd3f8dff364f8",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Core/RecoveryLock.swift",
+      "shipping_sha256": "8e3597a853c630092de756fcaaa91f8656a5596d05347ebef5a13ab86159daeb",
+      "host_sha256": "8e3597a853c630092de756fcaaa91f8656a5596d05347ebef5a13ab86159daeb",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Core/AppServices.swift",
+      "shipping_sha256": "480bd4f8c3cab0e0b2ba4ef75aa6f3a7e712636ccfd52c51f4aa0bffb7435ea5",
+      "host_sha256": "480bd4f8c3cab0e0b2ba4ef75aa6f3a7e712636ccfd52c51f4aa0bffb7435ea5",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Core/Shell.swift",
+      "shipping_sha256": "152b073b2e1b961b3fb81ec8ec64aee9e0b1c8fb5382553ad19df71769d058a0",
+      "host_sha256": "152b073b2e1b961b3fb81ec8ec64aee9e0b1c8fb5382553ad19df71769d058a0",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Core/SessionMath.swift",
+      "shipping_sha256": "32616677b6fc6d99249cda6189bfec7233f4a9363777302731452b7ae4e6345e",
+      "host_sha256": "32616677b6fc6d99249cda6189bfec7233f4a9363777302731452b7ae4e6345e",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Core/ProcessControl.swift",
+      "shipping_sha256": "962fffa754a4d8b5d641ad0a0e514f4281c1083a0dd7e0ce8c7c985e654e801a",
+      "host_sha256": "962fffa754a4d8b5d641ad0a0e514f4281c1083a0dd7e0ce8c7c985e654e801a",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Core/SessionManager.swift",
+      "shipping_sha256": "30cd3707705d6816d522e4bb3b24901902df77f18dddd38a847e761d2937dafd",
+      "host_sha256": "30cd3707705d6816d522e4bb3b24901902df77f18dddd38a847e761d2937dafd",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/System/CancellableCommand.swift",
+      "shipping_sha256": "9a5deb794ea3a63b16d60dcaf9f6a5a2e3f9654dfdc0e689d501528e32ad18eb",
+      "host_sha256": "9a5deb794ea3a63b16d60dcaf9f6a5a2e3f9654dfdc0e689d501528e32ad18eb",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/System/PowerMonitor.swift",
+      "shipping_sha256": "8a34ce128a9d654340aacc78b0c55f4ce81b23f79029301b1605e160b50bc834",
+      "host_sha256": "8a34ce128a9d654340aacc78b0c55f4ce81b23f79029301b1605e160b50bc834",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/System/LidObserver.swift",
+      "shipping_sha256": "ec543232e098d7f1a3cd9b10bcfdf281f5c345af227f60fc1a144ec3cb3849d0",
+      "host_sha256": "ec543232e098d7f1a3cd9b10bcfdf281f5c345af227f60fc1a144ec3cb3849d0",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/System/DisplayPower.swift",
+      "shipping_sha256": "455c58cdb4ab23e04ae6945972e92fd74f2e5cda3acde4482e078a2555c113a1",
+      "host_sha256": "455c58cdb4ab23e04ae6945972e92fd74f2e5cda3acde4482e078a2555c113a1",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/System/AudioControl.swift",
+      "shipping_sha256": "8709df8d17481b8aa9089d8677b9fd307d35301e217cf079eebfad6f1b107fe4",
+      "host_sha256": "8709df8d17481b8aa9089d8677b9fd307d35301e217cf079eebfad6f1b107fe4",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/System/BrightnessSampler.swift",
+      "shipping_sha256": "47851bbe39f3b092c1771a58b1f6f52968bc620637b0db816b80b5280c76ff8d",
+      "host_sha256": "47851bbe39f3b092c1771a58b1f6f52968bc620637b0db816b80b5280c76ff8d",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/System/ShellTimeout.swift",
+      "shipping_sha256": "d50b4b2ab76a1372d61b73fae3cbba9f882146fcae6e7f3b9833d628e838bd91",
+      "host_sha256": "d50b4b2ab76a1372d61b73fae3cbba9f882146fcae6e7f3b9833d628e838bd91",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/System/Notifier.swift",
+      "shipping_sha256": "f8fc7abb1e950a76b8f0bbae35e07350404c16d01797b507ae01d341ac86afcd",
+      "host_sha256": "f8fc7abb1e950a76b8f0bbae35e07350404c16d01797b507ae01d341ac86afcd",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Model/Session.swift",
+      "shipping_sha256": "a35f39c2e19f5a79adadc41af3402b009a60bc588c5b620137af4fb17f35b527",
+      "host_sha256": "a35f39c2e19f5a79adadc41af3402b009a60bc588c5b620137af4fb17f35b527",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Model/Config.swift",
+      "shipping_sha256": "5d5a25e4cff970d878006d8b9504d017e40d58849836852d49943723797ad3af",
+      "host_sha256": "5d5a25e4cff970d878006d8b9504d017e40d58849836852d49943723797ad3af",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Model/SliderSettings.swift",
+      "shipping_sha256": "c5d71363f4723e9ecac7aeafca3f0cce5d769e83104c805346e913f757585195",
+      "host_sha256": "c5d71363f4723e9ecac7aeafca3f0cce5d769e83104c805346e913f757585195",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Model/RuntimeState.swift",
+      "shipping_sha256": "a6003c7096da15d7fa980218be76a72fb488e8592b165721d117dcb16ace696c",
+      "host_sha256": "a6003c7096da15d7fa980218be76a72fb488e8592b165721d117dcb16ace696c",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Model/BatterySettings.swift",
+      "shipping_sha256": "bf28501508255b99e92e28e4b231a7d91ec3c813884c00739567851b96a93f84",
+      "host_sha256": "bf28501508255b99e92e28e4b231a7d91ec3c813884c00739567851b96a93f84",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Store/Paths.swift",
+      "shipping_sha256": "b4eb5dcccb9f11f32fdbdcc4d6efc32da67ed90ee3356251cb5376695925d71b",
+      "host_sha256": "b4eb5dcccb9f11f32fdbdcc4d6efc32da67ed90ee3356251cb5376695925d71b",
+      "original_main_annotation_disabled": false
+    },
+    {
+      "path": "Sources/WideAwake/Store/Store.swift",
+      "shipping_sha256": "cac6cc9be685d11df1e297fc079b36d226aa95e12657e23415d680a87894802e",
+      "host_sha256": "cac6cc9be685d11df1e297fc079b36d226aa95e12657e23415d680a87894802e",
+      "original_main_annotation_disabled": false
+    }
+  ],
+  "observations": [
+    "fresh Off and + to Ready",
+    "Escape dismissed shipping panel",
+    "separate helper injected close; Show panel revealed Running",
+    "after real one-minute interval shipping panel Off/slider0 and Timer finished. Normal sleep is restored.",
+    "next running case actual shipping Turn off returns Off/slider0",
+    "separate helper injected open; rearm Ready, injected close Running, injected open returns Off/slider0",
+    "controlled helper quit completed clean journal; fresh controlled helper relaunch starts Off; quit completed"
+  ],
+  "helper_controls_are_separate_injected_events": true,
+  "fresh_relaunch_is_new_disposable_state_not_persisted_live_recovery": true,
+  "real_system_effects": false,
+  "files": [
+    {
+      "path": "expired.png",
+      "bytes": 61281,
+      "sha256": "714e0180c1f6aceffee96db746fbb05be0c32f415d5d9551932a261232720a65"
+    },
+    {
+      "path": "green-journey.json",
+      "bytes": 9888,
+      "sha256": "6de0bd295e706d419a646967928b4d23ff8a5766ba9f0149b56c77b96d33fdbb"
+    },
+    {
+      "path": "ready.png",
+      "bytes": 66497,
+      "sha256": "8e38c3449055d1c0164e6524fedd4e27d6439ac37a6263605b975e137106203e"
+    },
+    {
+      "path": "red-journey.json",
+      "bytes": 8024,
+      "sha256": "ae7148f41396f4620669be68ed88d89a04e5a1edd9f3d11190df3df824a3f274"
+    },
+    {
+      "path": "reset.png",
+      "bytes": 61569,
+      "sha256": "19d5b56132aeb2a3d11cef38d14aec9e6cb2d8e6a8992194ccbc764c81d637f6"
+    }
+  ],
+  "capture_method": {
+    "method": "Actual opaque CUA native-window screenshot bytes, saved directly without pixel edits/compositing; window title retained",
+    "reason": "Earlier NSView.cacheDisplay bitmaps had transparent backgrounds, making black labels invisible in some viewers; those originals remain preserved in previous frozen packet",
+    "capture_pid": 81731,
+    "host": "Same controlled direct-Date-clock host as prior successful run; no source delta",
+    "captured_states": [
+      "Ready",
+      "Off with Timer finished. Normal sleep is restored.",
+      "Off after separately injected lid-open reset"
+    ],
+    "capture_journey": [
+      {
+        "active": false,
+        "event": "shown",
+        "fake_effect_calls": [],
+        "journal_dirty": false,
+        "notice": "",
+        "phase": "idle",
+        "real_system_effects": false,
+        "selected_seconds": 0,
+        "steps": 0,
+        "wall_time": 1794928389.4446568
+      },
+      {
+        "active": false,
+        "event": "initial",
+        "fake_effect_calls": [],
+        "journal_dirty": false,
+        "notice": "",
+        "phase": "idle",
+        "real_system_effects": false,
+        "selected_seconds": 0,
+        "steps": 0,
+        "wall_time": 1794928389.4758081
+      },
+      {
+        "active": false,
+        "event": "transition",
+        "fake_effect_calls": [],
+        "journal_dirty": false,
+        "notice": "",
+        "phase": "arming",
+        "real_system_effects": false,
+        "selected_seconds": 60,
+        "steps": 1,
+        "wall_time": 1794928392.4390721
+      },
+      {
+        "active": true,
+        "event": "transition",
+        "fake_effect_calls": [
+          "disablesleep 1"
+        ],
+        "journal_dirty": true,
+        "notice": "",
+        "phase": "ready",
+        "real_system_effects": false,
+        "selected_seconds": 60,
+        "steps": 1,
+        "wall_time": 1794928392.482979
+      },
+      {
+        "active": true,
+        "event": "transition",
+        "fake_effect_calls": [
+          "disablesleep 1"
+        ],
+        "journal_dirty": true,
+        "notice": "",
+        "phase": "running",
+        "real_system_effects": false,
+        "selected_seconds": 60,
+        "steps": 1,
+        "wall_time": 1794928406.707559
+      },
+      {
+        "active": true,
+        "event": "simulated-close",
+        "fake_effect_calls": [
+          "disablesleep 1"
+        ],
+        "journal_dirty": true,
+        "notice": "",
+        "phase": "running",
+        "real_system_effects": false,
+        "selected_seconds": 60,
+        "steps": 1,
+        "wall_time": 1794928406.732915
+      },
+      {
+        "active": true,
+        "event": "shown",
+        "fake_effect_calls": [
+          "disablesleep 1"
+        ],
+        "journal_dirty": true,
+        "notice": "",
+        "phase": "running",
+        "real_system_effects": false,
+        "selected_seconds": 60,
+        "steps": 1,
+        "wall_time": 1794928406.815973
+      },
+      {
+        "active": false,
+        "event": "transition",
+        "fake_effect_calls": [
+          "disablesleep 1",
+          "disablesleep 0"
+        ],
+        "journal_dirty": false,
+        "notice": "Timer finished. Normal sleep is restored.",
+        "phase": "idle",
+        "real_system_effects": false,
+        "selected_seconds": 0,
+        "steps": 0,
+        "wall_time": 1794928466.8381681
+      },
+      {
+        "active": false,
+        "event": "transition",
+        "fake_effect_calls": [
+          "disablesleep 1",
+          "disablesleep 0"
+        ],
+        "journal_dirty": false,
+        "notice": "",
+        "phase": "arming",
+        "real_system_effects": false,
+        "selected_seconds": 60,
+        "steps": 1,
+        "wall_time": 1794928483.84498
+      },
+      {
+        "active": true,
+        "event": "transition",
+        "fake_effect_calls": [
+          "disablesleep 1",
+          "disablesleep 0",
+          "disablesleep 1"
+        ],
+        "journal_dirty": true,
+        "notice": "",
+        "phase": "running",
+        "real_system_effects": false,
+        "selected_seconds": 60,
+        "steps": 1,
+        "wall_time": 1794928483.889688
+      },
+      {
+        "active": true,
+        "event": "transition",
+        "fake_effect_calls": [
+          "disablesleep 1",
+          "disablesleep 0",
+          "disablesleep 1"
+        ],
+        "journal_dirty": true,
+        "notice": "",
+        "phase": "stopping",
+        "real_system_effects": false,
+        "selected_seconds": 0,
+        "steps": 0,
+        "wall_time": 1794928492.421379
+      },
+      {
+        "active": false,
+        "event": "transition",
+        "fake_effect_calls": [
+          "disablesleep 1",
+          "disablesleep 0",
+          "disablesleep 1",
+          "disablesleep 0"
+        ],
+        "journal_dirty": false,
+        "notice": "",
+        "phase": "idle",
+        "real_system_effects": false,
+        "selected_seconds": 0,
+        "steps": 0,
+        "wall_time": 1794928492.46109
+      },
+      {
+        "active": false,
+        "event": "transition",
+        "fake_effect_calls": [
+          "disablesleep 1",
+          "disablesleep 0",
+          "disablesleep 1",
+          "disablesleep 0"
+        ],
+        "journal_dirty": false,
+        "notice": "",
+        "phase": "idle",
+        "real_system_effects": false,
+        "selected_seconds": 0,
+        "steps": 0,
+        "wall_time": 1794928492.480824
+      },
+      {
+        "active": false,
+        "event": "simulated-open",
+        "fake_effect_calls": [
+          "disablesleep 1",
+          "disablesleep 0",
+          "disablesleep 1",
+          "disablesleep 0"
+        ],
+        "journal_dirty": false,
+        "notice": "",
+        "phase": "idle",
+        "real_system_effects": false,
+        "selected_seconds": 0,
+        "steps": 0,
+        "wall_time": 1794928492.499967
+      },
+      {
+        "active": false,
+        "event": "shown",
+        "fake_effect_calls": [
+          "disablesleep 1",
+          "disablesleep 0",
+          "disablesleep 1",
+          "disablesleep 0"
+        ],
+        "journal_dirty": false,
+        "notice": "",
+        "phase": "idle",
+        "real_system_effects": false,
+        "selected_seconds": 0,
+        "steps": 0,
+        "wall_time": 1794928492.531197
+      },
+      {
+        "active": false,
+        "event": "transition",
+        "fake_effect_calls": [
+          "disablesleep 1",
+          "disablesleep 0",
+          "disablesleep 1",
+          "disablesleep 0"
+        ],
+        "journal_dirty": false,
+        "notice": "",
+        "phase": "idle",
+        "real_system_effects": false,
+        "selected_seconds": 0,
+        "steps": 0,
+        "wall_time": 1794928500.681497
+      },
+      {
+        "active": false,
+        "event": "quit",
+        "fake_effect_calls": [
+          "disablesleep 1",
+          "disablesleep 0",
+          "disablesleep 1",
+          "disablesleep 0"
+        ],
+        "journal_dirty": false,
+        "notice": "",
+        "phase": "idle",
+        "real_system_effects": false,
+        "selected_seconds": 0,
+        "steps": 0,
+        "wall_time": 1794928500.714371
+      }
+    ],
+    "original_green_journey_retained": "green-journey.json remains earlier full functional control; new screenshots are separate later run",
+    "historical_native_case_images": "Original ready/running alpha bitmaps remain raw historical records, not opaque screenshots. They are not rewritten or presented as cross-background legibility proof."
+  }
+}
