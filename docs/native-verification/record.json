@@ -1,0 +1,91 @@
+{
+  "source_commit": "42f826c439c9bde0ce092c6b701b56f45b94d54d",
+  "source_version": "0.3.1",
+  "source_build": "4",
+  "fixture": "docs/native-case/build-preview.py",
+  "record_scope": "Selected original fixture events in order; wall-clock values omitted. UI observations were noted separately during the interactive run.",
+  "events": [
+    {
+      "event": "initial",
+      "phase": "idle",
+      "active": false,
+      "selected_seconds": 0,
+      "fake_effect_calls": [],
+      "journal_dirty": false,
+      "real_system_effects": false
+    },
+    {
+      "event": "transition",
+      "phase": "arming",
+      "active": false,
+      "selected_seconds": 60,
+      "fake_effect_calls": [],
+      "journal_dirty": false,
+      "real_system_effects": false
+    },
+    {
+      "event": "transition",
+      "phase": "ready",
+      "active": true,
+      "selected_seconds": 60,
+      "fake_effect_calls": [
+        "pmset -g",
+        "disablesleep 1"
+      ],
+      "journal_dirty": true,
+      "real_system_effects": false
+    },
+    {
+      "event": "simulated-close",
+      "phase": "running",
+      "active": true,
+      "selected_seconds": 60,
+      "fake_effect_calls": [
+        "pmset -g",
+        "disablesleep 1"
+      ],
+      "journal_dirty": true,
+      "real_system_effects": false
+    },
+    {
+      "event": "transition",
+      "phase": "stopping",
+      "active": true,
+      "selected_seconds": 0,
+      "fake_effect_calls": [
+        "pmset -g",
+        "disablesleep 1"
+      ],
+      "journal_dirty": true,
+      "real_system_effects": false
+    },
+    {
+      "event": "simulated-open",
+      "phase": "idle",
+      "active": false,
+      "selected_seconds": 0,
+      "fake_effect_calls": [
+        "pmset -g",
+        "disablesleep 1",
+        "pmset -g",
+        "disablesleep 0"
+      ],
+      "journal_dirty": false,
+      "real_system_effects": false
+    },
+    {
+      "event": "quit",
+      "phase": "idle",
+      "active": false,
+      "selected_seconds": 0,
+      "fake_effect_calls": [
+        "pmset -g",
+        "disablesleep 1",
+        "pmset -g",
+        "disablesleep 0"
+      ],
+      "journal_dirty": false,
+      "real_system_effects": false
+    }
+  ]
+}
