@@ -1,12 +1,12 @@
-<p align="center"><img src="docs/hero.svg" alt="WideAwake. Set a time. Close the lid. Open to reset." width="100%"></p>
+# WideAwake
 
-<p align="center"><a href="https://github.com/nazeeh111/WideAwake/releases/tag/v0.3.1">Download 0.3.1 preview</a> · <a href="#install">Install</a> · <a href="#how-it-works">How it works</a> · <a href="LICENSE">MIT license</a></p>
+Set a duration in the Mac menu bar before closing a MacBook. Closing the lid starts the timer. Opening the lid cancels it and returns the slider to **Off**. The default range is 15 minutes to 6 hours, in 15-minute steps.
 
-WideAwake is a small native macOS menu bar timer intended to keep a MacBook awake with the lid closed. Choose a duration using a slider you can customize. The defaults are **15-minute steps up to 6 hours**. Reopening the lid stops the timer and resets the slider to Off.
+[Get the 0.3.1 macOS preview](https://github.com/nazeeh111/WideAwake/releases/tag/v0.3.1) · [Installation and power permissions](#install)
 
-<p align="center"><img src="docs/panel-ready.png" alt="WideAwake timer with battery status and editable battery limits" width="360"></p>
+<p><img src="docs/panel-ready.png" alt="WideAwake’s native menu bar panel is ready for a 1 hour 30 minute timer. The timer starts on lid close and resets on reopening." width="314"></p>
 
-This preview has checked native panels and controlled power-state behavior. **Physical closed-lid operation still needs hardware validation.** [Verification record](docs/VERIFICATION.md).
+The panel shows the ready state. Controlled tests exercise the power-state logic with simulated events. Physical closed-lid operation still needs hardware validation. [Verification record](docs/VERIFICATION.md)
 
 ## A native control case
 
