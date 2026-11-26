@@ -10,13 +10,11 @@ The panel shows the ready state. Controlled tests exercise the power-state logic
 
 ## A native control case
 
-The captures below retain the earlier source snapshots identified by their provenance. They predate the recovery changes in 0.3.1. Regression tests and the read-only CLI separately check the combined source; the final combined app has not been newly exercised through its live GUI or physical hardware.
-
-The shipping AppKit panel was exercised in a task-owned preview with **simulated hardware effects**. One-minute settings keep the case bounded; the product defaults remain 15-minute steps up to 6 hours. The preview never invokes the live registration, power, audio, display or launchd services. No lid was moved and no macOS setting was changed.
+The captures below predate the recovery changes in 0.3.1 and retain their original provenance. A [separate native check of the combined 0.3.1 source](docs/native-verification/README.md) exercised the shipping AppKit panel in an effects-disabled host. One minute reached **Ready**, a simulated lid close displayed a running deadline, and a simulated lid open returned the panel to **Off**. The host used disposable state and fake system services. Physical lid and power behavior remain unverified for this build.
 
 <picture><source media="(max-width:600px)" srcset="docs/native-case/deadline-mobile.png"><img src="docs/native-case/deadline.png" alt="A one-minute simulated native control: Ready schedules sixty seconds, then a simulated lid event shifts the deadline by forty-seven seconds and schedules a full minute. These are scheduled deadlines; expiry was not visually verified."></picture>
 
-[Current source, injected effects and exact recorded route](docs/native-case/README.md). The controlled states establish software behavior, not physical closed-lid operation. The existing screenshots and verification below retain their original scope.
+[Historical timeline, injected effects and exact recorded route](docs/native-case/README.md). The controlled states establish software behavior, not physical closed-lid operation. The existing screenshots and verification below retain their original scope.
 
 A [later unlocked native follow-up](docs/native-followup/README.md) observed one-minute expiry, Turn off and injected-open reset in the shipping panel after correcting only the private test clock. All effects remained simulated; the original timeline above retains its historical scope.
 
